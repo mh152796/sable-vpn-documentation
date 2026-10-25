@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sable - Documentation</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <h1>Sable Documentation</h1>
+    <p>Welcome to the documentation for <strong>Sable</strong>, a self-hosted VPN platform made of three projects: a Flutter VPN app for Android and iOS, a NestJS backend API with an agent for your VPN servers, and a Next.js admin panel. Follow this guide to set everything up, brand it and publish it.</p>
+
+    <div class="alert">
+        <strong>What is in this package:</strong>
+        <ul class="step-list" style="margin-top: 10px;">
+            <li><strong>sable-vpn/</strong> &mdash; the Flutter app (Android and iOS, including the iOS tunnel extension).</li>
+            <li><strong>sable-backend/</strong> &mdash; the NestJS + PostgreSQL API, plus the VPN node agent in <code>sable-backend/node-agent/</code>.</li>
+            <li><strong>sable-admin/</strong> &mdash; the Next.js admin panel.</li>
+            <li><strong>Documentation/</strong> &mdash; this guide.</li>
+        </ul>
+        <strong>Setting up for the first time?</strong> Start with the <a href="#backend-setup">backend (section 13)</a>, then the <a href="#admin-panel-setup">admin panel (section 14)</a>, then add your first <a href="#vpn-servers">VPN server (section 15)</a>, then come back to <a href="#prerequisites">section 1</a> for the app. The app and the admin panel both need a running backend, and the app needs at least one active VPN server to connect to.
+    </div>
+
+    <div class="toc">
+        <strong>Contents</strong>
+        <ol>
+            <li><a href="#feature-walkthrough">Feature Walkthrough</a></li>
+            <li><a href="#third-party-services">Third-Party Services and Costs</a></li>
+            <li><a href="#architecture">How the Pieces Connect (Architecture)</a></li>
+            <li><a href="#prerequisites">1. Prerequisites</a></li>
+            <li><a href="#environment-setup">2. Environment Setup</a></li>
+            <li><a href="#change-package-name">3. Change Package Name and Bundle ID</a></li>
+            <li><a href="#firebase-setup">4. Firebase Setup</a></li>
+            <li><a href="#social-sign-in">5. Social Sign-In and Push Notifications</a></li>
+            <li><a href="#change-app-name">6. Change App Name</a></li>
+            <li><a href="#change-app-icon">7. App Icon, Splash and Colours</a></li>
+            <li><a href="#api-customization">8. Connect the App to Your Backend</a></li>
+            <li><a href="#localization">9. Languages</a></li>
+            <li><a href="#admob">10. AdMob and Rewarded Ads</a></li>
+            <li><a href="#premium">11. Premium Subscriptions (RevenueCat)</a></li>
+            <li><a href="#build-and-release">12. Build and Release</a></li>
+            <li><a href="#backend-setup">13. Backend Setup (NestJS)</a></li>
+            <li><a href="#admin-panel-setup">14. Admin Panel Setup (Next.js)</a></li>
+            <li><a href="#vpn-servers">15. VPN Servers and the Node Agent</a></li>
+            <li><a href="#api-reference">16. API Reference</a></li>
+            <li><a href="#database-schema">17. Database Schema</a></li>
+            <li><a href="#faq">18. FAQ and Common Build Errors</a></li>
+            <li><a href="#support">19. Support</a></li>
+            <li><a href="#changelog">20. Changelog</a></li>
+            <li><a href="#upgrading">21. Upgrading to a New Version</a></li>
+            <li><a href="#licences">22. Open-Source Licences</a></li>
+        </ol>
+    </div>
+
+    <!-- ===================================================== -->
+    <section id="feature-walkthrough">
+        <h2>Feature Walkthrough</h2>
+        <p>A plain-language tour of what the app does, so you can find your way around before touching any code. Nothing in this section needs programming knowledge &mdash; the technical setup starts at <a href="#prerequisites">section 1</a>.</p>
+
+        <h3>First launch and sign-in</h3>
+        <ul class="step-list">
+            <li><strong>Sign in</strong> &mdash; email and password, or Google. New users create an account with their email; the backend emails a one-time code to confirm it. A forgotten password is reset the same way.</li>
+            <li><strong>Device limit</strong> &mdash; each plan allows a number of devices at once (1 on Free, 5 on Premium by default). When the limit is reached, the user is asked to sign out another device first.</li>
+            <li><strong>Maintenance and updates</strong> &mdash; if you turn on maintenance mode or require a newer app version in the admin panel, users see that message at launch.</li>
+        </ul>
+        <div class="image-gallery">
+            <img src="assets/01-sign-in.jpg" alt="Sign in">
+            <img src="assets/02-create-account.jpg" alt="Create account">
+        </div>
+
+        <h3>Connecting</h3>
+        <ul class="step-list">
+            <li><strong>One-tap connect</strong> &mdash; the Home screen has a large connect button. Once connected it shows the connection time, upload and download speed and the data used.</li>
+            <li><strong>Locations</strong> &mdash; users search locations, see recent and favourite servers and each server's current load. Each location is <strong>Free</strong>, <strong>Ads</strong> (unlocked by watching an ad) or <strong>Premium</strong>.</li>
+            <li><strong>Protocol</strong> &mdash; WireGuard, V2Ray (VMess over TLS) or Auto, which lets the app choose.</li>
+            <li><strong>Light and dark theme</strong> &mdash; the whole app follows the system setting or the user's choice.</li>
+        </ul>
+        <div class="image-gallery">
+            <img src="assets/03-home-screen.jpg" alt="Home screen">
+            <img src="assets/04-connected.jpg" alt="Connected">
+            <img src="assets/05-dark-mode.jpg" alt="Dark theme">
+        </div>
+        <div class="image-gallery">
+            <img src="assets/06-locations.jpg" alt="Locations">
+            <img src="assets/07-encryption-protocol.jpg" alt="Protocol picker">
+            <img src="assets/08-ad-servers.jpg" alt="Ad-unlocked servers">
+        </div>
+
+        <h3>Free time, rewarded ads and Premium</h3>
+        <ul class="step-list">
+            <li><strong>Daily free time</strong> &mdash; Free users get a daily allowance of VPN time (60 minutes a day by default).</li>
+            <li><strong>Rewarded ads</strong> &mdash; users watch a short ad to add time or to unlock an Ads location. Each step on the reward ladder adds more minutes. The backend adds the time only after AdMob confirms the ad was watched.</li>
+            <li><strong>Premium</strong> &mdash; monthly or yearly subscriptions through Google Play and the App Store (via RevenueCat): all locations, no ads, more devices and no time limit. Users can restore purchases.</li>
+            <li><strong>Promo codes</strong> &mdash; codes you create in the admin panel give a plan for a set time.</li>
+        </ul>
+        <div class="image-gallery">
+            <img src="assets/09-unlock-with-an-ad.jpg" alt="Unlock with an ad">
+            <img src="assets/10-get-more-time.jpg" alt="Get more time">
+        </div>
+
+        <h3>Tools</h3>
+        <ul class="step-list">
+            <li><strong>Speed test</strong> &mdash; measures latency, jitter, download and upload speed through the tunnel.</li>
+            <li><strong>Split tunneling</strong> &mdash; on Android, users choose apps that skip the VPN. On iOS, they choose domains, because iOS does not allow per-app splitting.</li>
+            <li><strong>Kill switch</strong> &mdash; on iOS, a setting in the app blocks traffic when the VPN drops. On Android, the app guides users to the system's Always-on VPN setting.</li>
+        </ul>
+        <div class="image-gallery">
+            <img src="assets/11-speed-test.jpg" alt="Speed test">
+            <img src="assets/12-speed-test-results.jpg" alt="Speed test results">
+            <img src="assets/13-split-tunneling.jpg" alt="Split tunneling">
+        </div>
+
+        <h3>Account and settings</h3>
+        <p>Current plan, change password, signed-in devices (sign any of them out), theme, language (English, Bangla, Arabic, Russian and Ukrainian), support messages, debug logs, legal pages, sign out and delete account.</p>
+        <div class="image-gallery">
+            <img src="assets/14-account.jpg" alt="Account">
+            <img src="assets/15-settings.jpg" alt="Settings">
+            <img src="assets/16-devices.jpg" alt="Devices">
+        </div>
+
+        <h3>What you control from the admin panel</h3>
+        <p>Almost everything users see is managed in the browser, without rebuilding the app: VPN servers and regions, plans and store products, promo codes, rewarded-ad rules, announcements, push notifications, minimum app version and maintenance mode, the privacy policy, terms and about pages, app users, support messages and integration keys. The full list is in <a href="#admin-panel-setup">section 14</a>.</p>
+        <div class="image-gallery">
+            <img src="assets/admin-dashboard.jpg" alt="Admin panel dashboard">
+        </div>
+
+        <div class="alert">
+            <strong>Recommended first hour.</strong> Set up the backend (<a href="#backend-setup">section 13</a>), start the admin panel (<a href="#admin-panel-setup">section 14</a>) and sign in. Add a region and one VPN server with the install command (<a href="#vpn-servers">section 15</a>) and activate it. Then point the app at your backend (<a href="#api-customization">section 8</a>) and run it on a real phone &mdash; create an account, tap Connect and check that your IP address changes. Once that round trip works, move on to branding, Firebase and store setup.
+        </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="third-party-services">
+        <h2>Third-Party Services and Costs</h2>
+        <p>Sable is self-hosted: you receive the full source code, with no licence keys and nothing payable to us. Some features connect to outside services that are <strong>not included in the purchase</strong>.</p>
+
+        <div class="alert-warning">
+            <strong>Buyers are responsible for all fees charged by third-party services.</strong> This includes hosting, VPN servers and their bandwidth, developer accounts, app store commissions, email sending and any usage beyond a provider's free tier. The item price covers the source code and documentation only. Prices change; check each provider's current rates.
+        </div>
+
+        <div class="alert">
+            <strong>Accounts you create yourself.</strong> Sable ships no credentials of ours. Depending on the features you keep, you need:
+            <ul class="step-list" style="margin-top:8px;">
+                <li><strong>Your own servers</strong> for the backend and admin panel, and for VPN traffic (<a href="#prerequisites">section 1</a>, <a href="#vpn-servers">section 15</a>).</li>
+                <li><strong>Your own SMTP account</strong> for sign-up and password-reset codes (<a href="#backend-setup">section 13</a>).</li>
+                <li><strong>Your own Firebase project</strong> for Google sign-in, push notifications, Analytics and Crashlytics (<code>firebase_core</code>, <code>firebase_auth</code>, <code>firebase_messaging</code>, <code>firebase_analytics</code>, <code>firebase_crashlytics</code> in the app, <code>firebase-admin</code> in the backend). You accept Google's <a href="https://firebase.google.com/terms" target="_blank">Firebase Terms of Service</a> and pay any usage beyond the free tier (<a href="#firebase-setup">section 4</a>).</li>
+                <li><strong>Your own RevenueCat account</strong> and store products for Premium (<a href="#premium">section 11</a>).</li>
+                <li><strong>Your own AdMob account</strong> if you show ads. The package contains only Google's test IDs (<a href="#admob">section 10</a>).</li>
+            </ul>
+        </div>
+
+        <table class="doc-table">
+            <thead><tr><th>Service</th><th>Required?</th><th>Used for</th><th>Who bills you</th></tr></thead>
+            <tbody>
+                <tr><td>VPS or cloud server</td><td>Required</td><td>Runs the backend (Node.js 24, PostgreSQL 14+) and the admin panel</td><td>Your hosting provider</td></tr>
+                <tr><td>VPN servers (Ubuntu or Debian)</td><td>Required</td><td>Carry your users' VPN traffic. One or more per location; each runs WireGuard, Xray (V2Ray) and the node agent. Watch the bandwidth allowance of each server</td><td>Your hosting provider</td></tr>
+                <tr><td>SMTP email</td><td>Required for email sign-up</td><td>One-time codes for sign-up and password reset</td><td>Your email provider, beyond its free tier</td></tr>
+                <tr><td>Google Play Developer account</td><td>Required for Android</td><td>Publishing the app; USD 25 one-time</td><td>Google</td></tr>
+                <tr><td>Apple Developer Program</td><td>Required for iOS</td><td>Publishing the app, and the Network Extension capability for the VPN tunnel; USD 99 per year</td><td>Apple</td></tr>
+                <tr><td>Firebase (your own project)</td><td>Optional</td><td>Google sign-in, push notifications, Analytics, Crashlytics. Without it, email sign-in still works and these features are off</td><td>Google, beyond the free tier</td></tr>
+                <tr><td>RevenueCat</td><td>Optional</td><td>Premium subscriptions: manages Google Play and App Store purchases and calls your backend's webhook</td><td>RevenueCat: free tier, then a share of tracked revenue</td></tr>
+                <tr><td>Google Play Billing</td><td>Optional (through RevenueCat)</td><td>Premium on Android. Google takes a commission on each sale, typically 15&ndash;30%</td><td>Google (deducted from sales)</td></tr>
+                <tr><td>Apple In-App Purchase</td><td>Optional (through RevenueCat)</td><td>Premium on iOS. Apple takes a commission on each sale, typically 15&ndash;30%</td><td>Apple (deducted from sales)</td></tr>
+                <tr><td>bKash and Nagad</td><td><strong>Not integrated</strong></td><td>The database contains switched-off placeholder rows for these two gateways, but no checkout is included. They stay off; enabling them needs your own development work</td><td>&mdash;</td></tr>
+                <tr><td>Stripe, PayPal and other gateways</td><td><strong>Not integrated</strong></td><td>No checkout integration ships for these</td><td>&mdash;</td></tr>
+                <tr><td>Google AdMob (your own account)</td><td>Optional</td><td>Rewarded and interstitial ads. You must follow AdMob's policies (<a href="#admob">section 10</a>)</td><td>Free to join; you are responsible for policy compliance and any costs related to your account or traffic</td></tr>
+                <tr><td>Cloudflare R2</td><td>Optional</td><td>Images uploaded from the admin panel</td><td>Cloudflare, beyond the free tier</td></tr>
+                <tr><td>Microsoft Clarity</td><td>Optional</td><td>Session analytics in the app; off until you set a project ID</td><td>Free</td></tr>
+                <tr><td>Axiom</td><td>Optional</td><td>Remote app logs; off until you set a token</td><td>Axiom, beyond the free tier</td></tr>
+                <tr><td>Cloudflare speed test endpoints</td><td>Used by default</td><td>The in-app speed test downloads from and uploads to <code>speed.cloudflare.com</code>. You can point it to your own server (<a href="#api-customization">section 8</a>)</td><td>Free public service</td></tr>
+            </tbody>
+        </table>
+
+        <div class="alert-warning">
+            <strong>VPN services are regulated in some countries.</strong> You are responsible for following the laws of the countries where you run servers and offer the app, the terms of your server providers, and the Google Play and App Store policies for VPN apps. Both stores have extra rules and declarations for VPN apps; read the current Google Play VpnService policy and Apple's App Review Guidelines before you submit.
+        </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="architecture">
+        <h2>How the Pieces Connect (Architecture)</h2>
+        <p>Sable is three projects plus one small agent on every VPN server. Only the backend talks to the database and holds secrets. The app never sees another user's data, and the admin panel never talks to PostgreSQL directly.</p>
+        <div class="arch-diagram">
+<svg viewBox="0 0 880 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sable architecture diagram" font-family="-apple-system, Segoe UI, Roboto, Arial, sans-serif">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5b6478"/></marker>
+  </defs>
+  <style>
+    .box{stroke-width:2}
+    .t{font-size:15px;font-weight:700;fill:#111}
+    .s{font-size:12px;fill:#555}
+    .l{font-size:11.5px;fill:#38404f}
+    .ln{stroke:#5b6478;stroke-width:1.8;fill:none;marker-end:url(#ah)}
+    .dash{stroke-dasharray:6 4}
+  </style>
+
+  <rect class="box" x="20" y="20" width="230" height="90" rx="12" fill="#eaf1fd" stroke="#16408c"/>
+  <text class="t" x="135" y="50" text-anchor="middle">Flutter App</text>
+  <text class="s" x="135" y="70" text-anchor="middle">Android and iOS</text>
+  <text class="s" x="135" y="88" text-anchor="middle">sable-vpn/</text>
+
+  <rect class="box" x="630" y="20" width="230" height="90" rx="12" fill="#efe9ff" stroke="#7c4dff"/>
+  <text class="t" x="745" y="50" text-anchor="middle">Admin Panel</text>
+  <text class="s" x="745" y="70" text-anchor="middle">Next.js server + browser</text>
+  <text class="s" x="745" y="88" text-anchor="middle">sable-admin/ (port 5101)</text>
+
+  <rect class="box" x="300" y="210" width="280" height="110" rx="12" fill="#fff6e0" stroke="#d99a00"/>
+  <text class="t" x="440" y="242" text-anchor="middle">Backend API</text>
+  <text class="s" x="440" y="262" text-anchor="middle">NestJS, https://api.your-domain.com/api/v1</text>
+  <text class="s" x="440" y="280" text-anchor="middle">sable-backend/ (port 3001, PM2)</text>
+  <text class="s" x="440" y="300" text-anchor="middle">accounts, plans, servers, peers, payments</text>
+
+  <rect class="box" x="300" y="470" width="280" height="80" rx="12" fill="#e9f1ff" stroke="#3b6fd8"/>
+  <text class="t" x="440" y="502" text-anchor="middle">PostgreSQL</text>
+  <text class="s" x="440" y="524" text-anchor="middle">users, plans, servers, sessions, audit log</text>
+
+  <rect class="box" x="630" y="210" width="230" height="110" rx="12" fill="#e7f8f0" stroke="#1f9d61"/>
+  <text class="t" x="745" y="240" text-anchor="middle">VPN servers</text>
+  <text class="s" x="745" y="260" text-anchor="middle">Ubuntu / Debian</text>
+  <text class="s" x="745" y="278" text-anchor="middle">WireGuard + Xray (V2Ray)</text>
+  <text class="s" x="745" y="296" text-anchor="middle">node agent (systemd)</text>
+
+  <rect class="box" x="630" y="470" width="230" height="80" rx="12" fill="#fdecea" stroke="#e0533d"/>
+  <text class="t" x="745" y="500" text-anchor="middle">SMTP and R2</text>
+  <text class="s" x="745" y="522" text-anchor="middle">OTP emails, image uploads</text>
+
+  <rect class="box" x="20" y="210" width="230" height="110" rx="12" fill="#fff2e5" stroke="#f57c00"/>
+  <text class="t" x="135" y="240" text-anchor="middle">Firebase</text>
+  <text class="s" x="135" y="260" text-anchor="middle">Google sign-in</text>
+  <text class="s" x="135" y="278" text-anchor="middle">Cloud Messaging (push)</text>
+  <text class="s" x="135" y="296" text-anchor="middle">Analytics, Crashlytics</text>
+
+  <rect class="box" x="20" y="470" width="230" height="80" rx="12" fill="#eef7f0" stroke="#34a853"/>
+  <text class="t" x="135" y="500" text-anchor="middle">RevenueCat / AdMob</text>
+  <text class="s" x="135" y="522" text-anchor="middle">store subscriptions, ads</text>
+
+  <!-- app to backend -->
+  <path class="ln" d="M200,110 L360,208"/>
+  <text class="l" x="300" y="150" text-anchor="middle" transform="rotate(31 300 150)">REST + Sable JWT</text>
+  <!-- admin to backend -->
+  <path class="ln" d="M690,110 L530,208"/>
+  <text class="l" x="590" y="150" text-anchor="middle" transform="rotate(-31 590 150)">REST + admin JWT</text>
+  <!-- app tunnel to VPN -->
+  <path class="ln" d="M250,45 C 470,45 660,90 720,208"/>
+  <text class="l" x="470" y="40" text-anchor="middle">encrypted tunnel (WireGuard or V2Ray)</text>
+  <!-- agent to backend -->
+  <path class="ln" d="M628,265 L582,265"/>
+  <text class="l" x="605" y="250" text-anchor="middle">agent</text>
+  <text class="l" x="605" y="290" text-anchor="middle">peers, health</text>
+  <!-- firebase -->
+  <path class="ln" d="M110,110 L110,208"/>
+  <text class="l" x="104" y="165" text-anchor="end">sign in</text>
+  <path class="ln" d="M298,265 L252,265"/>
+  <text class="l" x="275" y="250" text-anchor="middle">verify,</text>
+  <text class="l" x="275" y="290" text-anchor="middle">push</text>
+  <!-- db -->
+  <path class="ln" d="M440,320 L440,468"/>
+  <text class="l" x="446" y="400">TypeORM</text>
+  <!-- smtp r2 -->
+  <path class="ln" d="M550,320 L680,468"/>
+  <text class="l" x="625" y="390" text-anchor="start">send, upload</text>
+  <!-- store/ads -->
+  <path class="ln" d="M60,110 C 5,240 5,400 60,468"/>
+  <text class="l" x="28" y="380" text-anchor="start">buy,</text>
+  <text class="l" x="28" y="394" text-anchor="start">ads</text>
+  <path class="ln dash" d="M250,500 L298,320"/>
+  <text class="l" x="215" y="430" text-anchor="middle">webhooks,</text>
+  <text class="l" x="215" y="444" text-anchor="middle">ad reward callbacks</text>
+</svg>
+        </div>
+        <table class="doc-table">
+            <thead><tr><th>Connection</th><th>What happens</th></tr></thead>
+            <tbody>
+                <tr><td>App &rarr; Backend</td><td>Every request goes to <code>https://api.your-domain.com/api/v1/...</code> with the user's Sable access token in <code>Authorization: Bearer</code> and device headers (<code>X-Device-Id</code>, <code>X-Platform</code>, <code>X-App-Version</code>). Access tokens last 15 minutes and are renewed with a refresh token.</td></tr>
+                <tr><td>App &rarr; Firebase &rarr; Backend</td><td>For Google sign-in, Firebase returns an ID token. The app sends it to <code>POST /auth/social</code>; the backend checks it with the Firebase Admin SDK and returns Sable tokens. Email sign-in does not use Firebase.</td></tr>
+                <tr><td>App &rarr; Backend &rarr; VPN server</td><td>When the user taps Connect, the backend picks a server, creates a WireGuard peer or a V2Ray user for that session and returns the tunnel settings. The app then connects straight to the VPN server. VPN traffic never passes through the backend.</td></tr>
+                <tr><td>VPN server (node agent) &rarr; Backend</td><td>The agent on each server sends health and load every 30 seconds and applies new or removed peers every 5 seconds. It signs in with the agent token from the install command.</td></tr>
+                <tr><td>Admin panel &rarr; Backend</td><td>The admin signs in with the email and password set in the backend <code>.env</code>. The panel keeps the admin token in an httpOnly cookie and forwards each browser request to <code>/api/v1/admin/...</code> from its own server, so the browser never talks to the API directly and no CORS setup is needed.</td></tr>
+                <tr><td>Backend &rarr; PostgreSQL</td><td>All data lives here. Only the backend connects.</td></tr>
+                <tr><td>Backend &rarr; SMTP, R2</td><td>One-time codes for sign-up and password reset are sent by email through your SMTP account. Images uploaded in the admin panel (region flags, push images) go to Cloudflare R2.</td></tr>
+                <tr><td>Backend &rarr; Firebase Cloud Messaging</td><td>Push notifications written in the admin panel are sent by the backend.</td></tr>
+                <tr><td>App &harr; RevenueCat &rarr; Backend</td><td>The app buys a subscription through Google Play or the App Store with the RevenueCat SDK. RevenueCat then calls the backend's webhook, and the backend grants or removes Premium.</td></tr>
+                <tr><td>App &harr; AdMob &rarr; Backend</td><td>A free user watches a rewarded ad. AdMob calls the backend's server-side verification URL, and only then does the backend add VPN time.</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="prerequisites">
+        <h2>1. Prerequisites</h2>
+        <p>Use these versions for the smoothest build. The project was built and tested with the versions marked "tested".</p>
+
+        <div class="prereq-grid">
+            <div class="prereq-card"><strong>Flutter SDK</strong>Tested: 3.47.6<br>(pinned in <code>.fvmrc</code>)</div>
+            <div class="prereq-card"><strong>Java (JDK)</strong>21 to run Gradle<br>(the app targets Java 17)</div>
+            <div class="prereq-card"><strong>Android SDK</strong>Compile/target 36<br>Min SDK 24</div>
+            <div class="prereq-card"><strong>Xcode</strong>26.2 or newer<br>iOS 15.6 or newer</div>
+            <div class="prereq-card"><strong>CocoaPods</strong>Latest (1.16 or newer)</div>
+            <div class="prereq-card"><strong>Node.js</strong>24 LTS (backend)<br>20.9+ (admin panel)</div>
+            <div class="prereq-card"><strong>PostgreSQL</strong>14 or newer<br>(tested on 17)</div>
+            <div class="prereq-card"><strong>Real devices</strong>An Android phone (ARM) and/or an iPhone</div>
+        </div>
+
+        <h3>Server size</h3>
+        <p>You need two kinds of server: one for the backend and admin panel, and one or more for VPN traffic.</p>
+        <table class="doc-table">
+            <thead><tr><th>Server</th><th>CPU</th><th>RAM</th><th>Disk</th><th>Notes</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Backend + admin panel, minimum</strong></td><td>1 vCPU</td><td>2 GB (plus 2 GB swap)</td><td>20 GB SSD</td><td>Testing and a small user base</td></tr>
+                <tr><td><strong>Backend + admin panel, recommended</strong></td><td>2 vCPU</td><td>4 GB</td><td>40 GB SSD</td><td>Launch and thousands of users. Consider a managed PostgreSQL as you grow</td></tr>
+                <tr><td><strong>Each VPN server</strong></td><td>1 vCPU or more</td><td>1 GB or more</td><td>10 GB+</td><td>Ubuntu 22.04 / 24.04 or Debian 12, a public IPv4 and generous bandwidth. Capacity depends mostly on network speed and bandwidth allowance, not CPU</td></tr>
+            </tbody>
+        </table>
+        <p>Building the admin panel (<code>npm run build</code>) needs about 1.5 GB of free RAM; on a 2 GB server add swap first. Shared hosting (cPanel without SSH and Node.js) is <strong>not</strong> enough; you need VPS or cloud servers with root SSH access.</p>
+
+        <div class="alert">
+            <strong>Test on real devices.</strong> The VPN tunnel cannot run in the iOS Simulator (Network Extensions are not supported there), and the Android VPN core ships only ARM libraries (<code>arm64-v8a</code>, <code>armeabi-v7a</code>), so it does not run on x86 Android emulators. The rest of the app opens in emulators, but Connect needs a phone.
+        </div>
+    </section>
+    <!-- ===================================================== -->
+    <section id="environment-setup">
+        <h2>2. Environment Setup</h2>
+        <p>Select your operating system to see the setup steps.</p>
+
+        <div class="tabs">
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="openTab('windows')">Windows</button>
+                <button class="tab-btn" onclick="openTab('mac')">macOS</button>
+                <button class="tab-btn" onclick="openTab('linux')">Linux</button>
+            </div>
+
+            <div id="windows" class="tab-content active">
+                <h3>Android Studio</h3>
+                <ul class="step-list">
+                    <li>Download Android Studio from the <a href="https://developer.android.com/studio" target="_blank">official page</a>, run the installer and let it download the SDK components.</li>
+                    <li><em>Optional:</em> create an emulator in the Device Manager.</li>
+                </ul>
+                <h3>Flutter SDK</h3>
+                <ul class="step-list">
+                    <li>Download the stable Windows release from the <a href="https://docs.flutter.dev/install/manual" target="_blank">Flutter download page</a> and extract it, for example to <code>C:\flutter</code>.</li>
+                    <li>Add <code>C:\flutter\bin</code> to the <strong>Path</strong> environment variable (This PC &gt; Properties &gt; Advanced system settings &gt; Environment Variables).</li>
+                    <li>Open a new Command Prompt and run <code>flutter doctor</code>. Fix anything it reports.</li>
+                </ul>
+                <h3>IDE</h3>
+                <ul class="step-list">
+                    <li>In Android Studio open <strong>File &gt; Settings &gt; Plugins &gt; Marketplace</strong>, install the <strong>Flutter</strong> and <strong>Dart</strong> plugins and restart.</li>
+                </ul>
+                <a href="https://www.youtube.com/watch?v=hfz_AraTk_k&t=1s" target="_blank" class="video-btn">▶ Watch Windows Setup Video</a>
+            </div>
+
+            <div id="mac" class="tab-content">
+                <h3>Android Studio</h3>
+                <ul class="step-list">
+                    <li>Download Android Studio from the <a href="https://developer.android.com/studio" target="_blank">official page</a>, drag it into Applications and complete the setup wizard.</li>
+                </ul>
+                <h3>Flutter SDK</h3>
+                <ul class="step-list">
+                    <li>Download the stable macOS release from the <a href="https://docs.flutter.dev/install/manual" target="_blank">Flutter download page</a> and extract it: <code>tar xf flutter_macos_&lt;version&gt;.tar.xz</code></li>
+                    <li>Add <code>flutter/bin</code> to your PATH in <code>~/.zshrc</code>, then open a new terminal and run <code>flutter doctor</code>.</li>
+                </ul>
+                <h3>Xcode and CocoaPods (for iOS)</h3>
+                <ul class="step-list">
+                    <li>Install Xcode from the Mac App Store, open it once to finish installing components, then run <code>sudo xcodebuild -runFirstLaunch</code>.</li>
+                    <li>Install CocoaPods: <code>sudo gem install cocoapods</code> (or <code>brew install cocoapods</code>).</li>
+                </ul>
+                <h3>IDE</h3>
+                <ul class="step-list">
+                    <li>In Android Studio open <strong>Settings &gt; Plugins &gt; Marketplace</strong>, install <strong>Flutter</strong> and <strong>Dart</strong> and restart.</li>
+                </ul>
+                <a href="https://www.youtube.com/watch?v=f09c-nw15K8" target="_blank" class="video-btn">▶ Watch macOS Setup Video</a>
+            </div>
+
+            <div id="linux" class="tab-content">
+                <h3>Android Studio</h3>
+                <ul class="step-list">
+                    <li>Download Android Studio from the <a href="https://developer.android.com/studio" target="_blank">official page</a>, extract it (<code>tar -xvzf android-studio-*-linux.tar.gz</code>) and run <code>bin/studio.sh</code>.</li>
+                </ul>
+                <h3>Flutter SDK</h3>
+                <ul class="step-list">
+                    <li>Download the stable Linux release from the <a href="https://docs.flutter.dev/install/manual" target="_blank">Flutter download page</a> and extract it: <code>tar xf flutter_linux_&lt;version&gt;.tar.xz</code></li>
+                    <li>Add <code>flutter/bin</code> to your PATH, then run <code>flutter doctor</code>.</li>
+                </ul>
+                <h3>IDE</h3>
+                <ul class="step-list">
+                    <li>In Android Studio open <strong>File &gt; Settings &gt; Plugins &gt; Marketplace</strong>, install <strong>Flutter</strong> and <strong>Dart</strong> and restart.</li>
+                </ul>
+                <a href="https://www.youtube.com/watch?v=e63OlW_2gpQ" target="_blank" class="video-btn">▶ Watch Linux Setup Video</a>
+            </div>
+        </div>
+
+
+        <h3>Open and run the app</h3>
+<pre><code>cd sable-vpn
+flutter pub get
+flutter run                 # on a connected real device</code></pre>
+        <p>Before the app can sign in and connect, point it at your backend (<a href="#api-customization">section 8</a>). There is no code generation step: translations and models are plain Dart files.</p>
+        <p>To check the project builds cleanly:</p>
+<pre><code>flutter analyze
+flutter test</code></pre>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="change-package-name">
+        <h2>3. Change Package Name and Bundle ID</h2>
+        <p>Every app needs a unique identifier, for example <code>com.yourcompany.vpn</code>. The defaults are <code>com.sablevpn.app</code> (Android and iOS), <code>com.sablevpn.app.VpnTunnel</code> (the iOS tunnel extension) and the App Group <code>group.com.sablevpn.app</code>. Change them <strong>before</strong> you set up Firebase, because Firebase apps are registered by this identifier.</p>
+
+        <h3>Android</h3>
+        <table class="doc-table">
+            <thead><tr><th>File</th><th>Change</th></tr></thead>
+            <tbody>
+                <tr><td><code>android/app/build.gradle</code></td><td><code>namespace</code> and <code>applicationId</code> (currently <code>com.sablevpn.app</code>)</td></tr>
+                <tr><td><code>android/app/src/main/kotlin/com/sablevpn/app/</code></td><td>The <code>package</code> line at the top of every <code>.kt</code> file in this folder and its <code>widget/</code> and <code>vpn_controller/</code> subfolders. You may also move the files into folders that match the new package (optional)</td></tr>
+                <tr><td><code>android/app/src/main/AndroidManifest.xml</code></td><td>The widget actions <code>com.sablevpn.app.widget.ACTION_CONNECT</code> and <code>ACTION_DISCONNECT</code>. Keep them identical to the constants in <code>widget/WidgetActionBroadcastReceiver.kt</code></td></tr>
+            </tbody>
+        </table>
+        <p>The <code>change_app_package_name</code> tool in <code>dev_dependencies</code> can do most of the Android part: <code>dart run change_app_package_name:main com.yourcompany.vpn</code>. Check the widget actions afterwards.</p>
+        <p>The VPN plugin in <code>packages/flutter_vpncore</code> has its own ID, <code>com.sablevpn.core</code>. It is internal and does not need to change.</p>
+
+        <h3>iOS</h3>
+        <p>Open <code>ios/Runner.xcworkspace</code> in Xcode and change the <strong>Bundle Identifier</strong> on <strong>Signing &amp; Capabilities</strong> for both targets:</p>
+        <ul class="step-list">
+            <li><strong>Runner</strong> &rarr; for example <code>com.yourcompany.vpn</code></li>
+            <li><strong>VpnTunnel</strong> &rarr; the Runner ID plus <code>.VpnTunnel</code>, for example <code>com.yourcompany.vpn.VpnTunnel</code></li>
+        </ul>
+        <p>Then update the same values in code. The app and the tunnel extension share data through the App Group, and the app starts the tunnel by its bundle ID. If any of these values differ, the app still builds but <strong>Connect fails on the device</strong>:</p>
+        <table class="doc-table">
+            <thead><tr><th>Value</th><th>Where to change it</th></tr></thead>
+            <tbody>
+                <tr><td>App Group <code>group.com.sablevpn.app</code></td><td><code>ios/Runner/Runner.entitlements</code><br><code>ios/VpnTunnel/VpnTunnel.entitlements</code><br><code>ios/VpnTunnel/VpnCoreShared.swift</code> (<code>appGroup</code>)<br><code>ios/Runner/AppDelegate.swift</code> (<code>sharedAppGroup</code>)<br><code>packages/flutter_vpncore/ios/Classes/FlutterVpnCorePlugin.swift</code> (<code>appGroup</code>)<br><code>lib/app/bootstrap.dart</code></td></tr>
+                <tr><td>Tunnel bundle ID <code>com.sablevpn.app.VpnTunnel</code></td><td><code>ios/VpnTunnel/VpnCoreShared.swift</code> (<code>tunnelBundleIdentifier</code>)<br><code>packages/flutter_vpncore/ios/Classes/FlutterVpnCorePlugin.swift</code></td></tr>
+            </tbody>
+        </table>
+        <p>Use <code>group.</code> followed by your Runner bundle ID as the new App Group, and register it in your Apple Developer account (<a href="#build-and-release">section 12</a>).</p>
+
+        <div class="alert">
+            <strong>Tip:</strong> the Dart package name in <code>pubspec.yaml</code> (<code>sable</code>) is internal and never shown to users. Leave it as is; renaming it means updating every <code>package:sable/</code> import.
+        </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="firebase-setup">
+        <h2>4. Firebase Setup</h2>
+        <p>Firebase provides Google sign-in, push notifications, Analytics and Crashlytics. <strong>It is optional:</strong> without it the app runs with email sign-in, and the Google button, push, Analytics and Crashlytics are switched off automatically.</p>
+        <div class="alert-warning">
+            <strong>Use your own Firebase project.</strong> The package ships <strong>placeholder</strong> files with values such as <code>YOUR_FIREBASE_...</code>. They let the project compile, but Firebase features stay off until you replace them:
+            <ul class="step-list" style="margin-top:8px;">
+                <li><code>sable-vpn/lib/firebase_options.dart</code></li>
+                <li><code>sable-vpn/android/app/google-services.json</code></li>
+                <li><code>sable-vpn/firebase.json</code></li>
+            </ul>
+            There is no iOS Firebase file in the package, so on iOS Firebase only works after step 2 below. No Firebase project of ours is included.
+        </div>
+
+        <h3>Step 1: Create a Firebase project</h3>
+        <ul class="step-list">
+            <li>Open the <a href="https://console.firebase.google.com" target="_blank">Firebase console</a> and click <strong>Create a project</strong>. Enter a name and accept the terms.</li>
+            <li>Choose whether to enable Gemini, and enable Google Analytics if you want the in-app Analytics, then click <strong>Create project</strong>.</li>
+        </ul>
+        <div class="image-gallery">
+            <img src="assets/firebase_project_creation_02.jpg" alt="Firebase project creation">
+            <img src="assets/firebase_project_creation_03.jpg" alt="Firebase Google Analytics option">
+            <img src="assets/firebase_project_creation_04.jpg" alt="Firebase create project">
+        </div>
+
+        <h3>Step 2: Connect the app (FlutterFire CLI)</h3>
+        <p>Change the package name and bundle ID first (section 3). The FlutterFire CLI then registers your Android and iOS apps and writes the config files:</p>
+<pre><code>npm install -g firebase-tools
+firebase login
+dart pub global activate flutterfire_cli
+cd sable-vpn
+flutterfire configure --project=&lt;your-firebase-project-id&gt;</code></pre>
+        <p>Select <strong>android</strong> and <strong>ios</strong> and confirm your IDs. The command updates <code>lib/firebase_options.dart</code>, <code>android/app/google-services.json</code>, <code>ios/Runner/GoogleService-Info.plist</code> and <code>firebase.json</code>. The Android build turns on the Firebase and Crashlytics Gradle plugins by itself once <code>google-services.json</code> no longer contains placeholders.</p>
+
+        <h3>Step 3: Enable sign-in methods</h3>
+        <ul class="step-list">
+            <li>Open <strong>Build &gt; Authentication &gt; Sign-in method</strong> and enable <strong>Google</strong>. (Email sign-in does not use Firebase; the Sable backend handles it.)</li>
+        </ul>
+        <div class="image-gallery">
+            <img src="assets/provider_select_page.jpg" alt="Firebase sign-in providers">
+            <img src="assets/provider_eneble_page_email_pass.jpg" alt="Enabling a provider">
+        </div>
+
+        <h3>Step 4: Service account for the backend</h3>
+        <p>The backend checks Google sign-ins and sends push notifications with a Firebase service account: <strong>Project settings &gt; Service accounts &gt; Generate new private key</strong>. Paste the JSON in the admin panel (<strong>Settings &gt; Integrations</strong>) or put it in the backend <code>.env</code> (<a href="#backend-setup">section 13, step 7</a>).</p>
+
+        <a href="https://www.youtube.com/results?search_query=flutterfire+configure+firebase+flutter" target="_blank" class="video-btn">▶ Firebase + Flutter video tutorials</a>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="social-sign-in">
+        <h2>5. Social Sign-In and Push Notifications</h2>
+
+        <h3>Google</h3>
+        <ul class="step-list">
+            <li>Enable <strong>Google</strong> in Firebase Authentication (section 4, step 3).</li>
+            <li><strong>Android:</strong> add your SHA-1 and SHA-256 fingerprints in <strong>Project settings &gt; Your apps &gt; Android</strong>: the debug key, your upload key and, after publishing, the <strong>App signing key</strong> from Play Console. Get local fingerprints with <code>cd android &amp;&amp; ./gradlew signingReport</code>. Without them sign-in fails with error 10. Download <code>google-services.json</code> again afterwards.</li>
+            <li><strong>iOS:</strong> in <code>ios/Runner/Info.plist</code>, replace <code>YOUR_IOS_CLIENT_ID</code> in two places with the iOS client ID from <code>GoogleService-Info.plist</code>: the <code>GIDClientID</code> value (<code>&lt;id&gt;.apps.googleusercontent.com</code>) and the URL scheme <code>com.googleusercontent.apps.&lt;id&gt;</code> (the <code>REVERSED_CLIENT_ID</code>).</li>
+        </ul>
+
+        <h3>Apple</h3>
+        <div class="alert-warning">
+            <strong>Sign in with Apple is not supported by the backend in this version.</strong> The iOS app shows an Apple button when Firebase is configured, but the backend accepts only Google tokens and answers Apple sign-ins with <code>UNSUPPORTED_PROVIDER</code>. Hide the button before you publish: in <code>lib/data/auth/firebase_social_identity.dart</code> remove the line <code>if (Platform.isIOS || Platform.isMacOS) SocialProvider.apple,</code>. Email and Google sign-in are not affected.
+        </div>
+        <p>Apple's App Review Guideline 4.8 asks apps that offer a third-party sign-in such as Google to also offer an equivalent private sign-in option. Email and password sign-in is available in Sable; check the current guideline before you submit and be ready to explain your sign-in options to App Review.</p>
+
+        <h3>Push notifications</h3>
+        <ul class="step-list">
+            <li><strong>Android:</strong> works once <code>google-services.json</code> is in place and the backend has the service account. Notifications use the channel <code>high_priority_channel</code>.</li>
+            <li><strong>iOS:</strong> in Xcode select the <strong>Runner</strong> target &gt; <strong>Signing &amp; Capabilities</strong> &gt; <strong>+ Capability</strong> &gt; <strong>Push Notifications</strong> (Remote notifications background mode is already set in <code>Info.plist</code>). Create an <strong>APNs key</strong> in your Apple Developer account and upload it in Firebase: <strong>Project settings &gt; Cloud Messaging &gt; Apple app configuration</strong>.</li>
+            <li>The app registers each device's push token with the backend, and the admin panel sends to those tokens. There is no topic name to keep in sync.</li>
+        </ul>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="change-app-name">
+        <h2>6. Change App Name</h2>
+        <table class="doc-table">
+            <thead><tr><th>Where</th><th>File</th><th>Key</th></tr></thead>
+            <tbody>
+                <tr><td>Android launcher name</td><td><code>android/app/src/main/AndroidManifest.xml</code></td><td><code>android:label="Sable"</code></td></tr>
+                <tr><td>iOS home-screen name</td><td><code>ios/Runner/Info.plist</code></td><td><code>CFBundleDisplayName</code>, <code>CFBundleName</code></td></tr>
+                <tr><td>iOS build settings (Runner and VpnTunnel)</td><td>Xcode &gt; target &gt; <strong>Build Settings</strong></td><td><code>INFOPLIST_KEY_CFBundleDisplayName</code></td></tr>
+                <tr><td>Name in iOS Settings &gt; VPN</td><td><code>packages/flutter_vpncore/ios/Classes/FlutterVpnCorePlugin.swift</code></td><td><code>localizedDescription = "Sable"</code></td></tr>
+                <tr><td>Android VPN notification</td><td><code>packages/flutter_vpncore/android/src/main/kotlin/com/sablevpn/core/</code> (<code>ServiceNotification.kt</code>, <code>VpnCoreService.kt</code>)</td><td>search for <code>Sable</code></td></tr>
+                <tr><td>Android home-screen widget</td><td><code>android/app/src/main/kotlin/com/sablevpn/app/widget/</code></td><td>search for <code>Sable</code></td></tr>
+                <tr><td>App title and on-screen text</td><td><code>lib/app/app.dart</code> (<code>title</code>), <code>lib/design/brand/sable_wordmark.dart</code>, <code>lib/core/i18n/app_strings.dart</code></td><td>search for <code>Sable</code> / <code>sable</code></td></tr>
+            </tbody>
+        </table>
+        <p>Tip: search <code>lib/</code>, <code>android/app/src/</code>, <code>ios/</code> and <code>packages/flutter_vpncore/</code> for <code>Sable</code> to find every user-visible occurrence.</p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="change-app-icon">
+        <h2>7. App Icon, Splash, Colours and Font</h2>
+        <h3>App icon and splash</h3>
+        <p>All launcher icons, the notification icon and the splash image are generated from one picture, <code>assets/brand/sable_silhouette.png</code>:</p>
+        <ul class="step-list">
+            <li>Replace <code>assets/brand/sable_silhouette.png</code> with your own logo (a PNG with a transparent background, the same pixel size as the original).</li>
+            <li>Run <code>flutter test tool/generate_brand_icons.dart</code>. It writes the Android <code>mipmap-*</code> icons, <code>launch_image.png</code> and the <code>ic_stat_sable_logo</code> notification icons, and the iOS <code>AppIcon.appiconset</code> and <code>LaunchImage.imageset</code>.</li>
+            <li>The icon and splash background colour is <code>#16408C</code>, set in <code>android/app/src/main/res/values/colors.xml</code> (<code>splash_primary</code>) and <code>res/values/ic_launcher_background.xml</code>. Change both to your brand colour before you generate.</li>
+            <li>The animated start screen in the app is <code>lib/design/brand/sable_boot_artwork.dart</code>; the logo mark is <code>lib/design/brand/sable_mark.dart</code>.</li>
+        </ul>
+
+        <h3>Brand colours</h3>
+        <p>All app colours are in <code>lib/design/tokens/sable_colors.dart</code>, with a light set (<code>SableColors.light</code>) and a dark set (<code>SableColors.dark</code>). Flutter writes colours as <code>0xAARRGGBB</code>: <code>FF</code> (fully opaque) followed by the normal hex code.</p>
+<pre><code>// lib/design/tokens/sable_colors.dart
+// SableColors.light
+primary: Color(0xFF16408C),        // brand blue #16408C
+connected: Color(0xFF1D50B5),      // the connect dial when connected
+
+// SableColors.dark
+primary: Color(0xFF5B8DEF),        // brand blue for dark mode #5B8DEF
+connected: Color(0xFF6FA0FF),</code></pre>
+        <p>Example: to use orange <strong>#FF6B00</strong>, change the light <code>primary</code> to <code>Color(0xFFFF6B00)</code> and pick a lighter orange for dark mode, then stop the app and run it again (hot reload does not update <code>const</code> colours). Screens read colours only from this file; a test (<code>test/design/tokens_test.dart</code>) fails if a screen uses a hard-coded colour.</p>
+
+        <h3>Font</h3>
+        <p>The app uses <strong>Inter Tight</strong> through the <code>google_fonts</code> package, which downloads the font the first time the app opens. On networks that block Google Fonts the app falls back to the system font. To ship the font inside the app instead, add the font files under <code>flutter: fonts:</code> in <code>pubspec.yaml</code> and change <code>face</code> in <code>lib/design/tokens/sable_typography.dart</code> to use <code>fontFamily</code>.</p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="api-customization">
+        <h2>8. Connect the App to Your Backend</h2>
+        <p>Set your backend address in <code>lib/core/config/auth_api_config.dart</code>:</p>
+<pre><code>// lib/core/config/auth_api_config.dart
+static const String origin = String.fromEnvironment(
+  'AUTH_API_BASE_URL',
+  defaultValue: 'https://api.your-domain.com',   // ← your backend, origin only
+);</code></pre>
+        <p>Enter the <strong>origin only</strong> (no <code>/api/v1</code>); the app adds <code>/api/v1/...</code> itself. You can also leave the file alone and pass the address when you build: <code>--dart-define=AUTH_API_BASE_URL=https://api.your-domain.com</code>.</p>
+        <div class="alert">
+            <strong>HTTPS in release builds.</strong> Release builds only allow HTTPS. Plain HTTP is allowed only in Android debug builds (for testing against <code>http://&lt;your-computer-ip&gt;:3001</code> on the same Wi-Fi). Put the backend behind HTTPS before you test a release build or an iPhone build.
+        </div>
+
+        <h3>Other build-time settings</h3>
+        <p>All of these are optional. Pass them with <code>--dart-define=NAME=value</code>, or put them in a <code>secrets.json</code> file (ignored by Git) and build with <code>--dart-define-from-file=secrets.json</code>. A missing value turns that feature off.</p>
+        <table class="doc-table">
+            <thead><tr><th>Name</th><th>Default</th><th>What it does</th></tr></thead>
+            <tbody>
+                <tr><td><code>AUTH_API_BASE_URL</code></td><td><code>https://your-domain.com</code></td><td>Backend origin (see above)</td></tr>
+                <tr><td><code>REVENUECAT_ANDROID_KEY</code>, <code>REVENUECAT_IOS_KEY</code></td><td>empty</td><td>Fallback RevenueCat SDK keys. Normally you set them in the admin panel instead (<a href="#premium">section 11</a>)</td></tr>
+                <tr><td><code>CLARITY_PROJECT_ID</code></td><td>empty</td><td>Microsoft Clarity session analytics</td></tr>
+                <tr><td><code>AXIOM_TOKEN</code></td><td>empty</td><td>Sends app logs to your Axiom dataset <code>vpn_log</code></td></tr>
+                <tr><td><code>SPEED_TEST_DOWNLOAD_URL</code>, <code>SPEED_TEST_UPLOAD_URL</code>, <code>SPEED_TEST_BYTES_PARAM</code></td><td><code>https://speed.cloudflare.com/__down</code>, <code>.../__up</code>, <code>bytes</code></td><td>Speed test targets. Point them to your own server if you prefer</td></tr>
+            </tbody>
+        </table>
+        <p>Everything else the app needs (plans, locations, ad units, RevenueCat keys, maintenance mode, minimum version, announcements, legal pages) comes from the backend at run time and is set in the admin panel.</p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="localization">
+        <h2>9. Languages</h2>
+        <p>The app ships with <strong>English</strong>, <strong>Bangla</strong>, <strong>Arabic</strong>, <strong>Russian</strong> and <strong>Ukrainian</strong>. Users pick a language on <strong>Account &gt; Language</strong>; the app starts in English until they do.</p>
+
+        <h3>What a language entry looks like</h3>
+        <p>All texts live in one Dart file, <code>lib/core/i18n/app_strings.dart</code>. The keys are in <code>lib/core/i18n/string_keys.dart</code>. Each key has one line per language:</p>
+<pre><code>// lib/core/i18n/app_strings.dart
+StringKeys.profile: {
+  "en": "Profile",
+  "bn": "প্রোফাইল",
+  "ar": "ملف شخصي",
+  "ru": "Профиль",
+  "uk": "Профіль",
+},</code></pre>
+        <p>To change a text, edit its line. A missing translation falls back to English for that key only.</p>
+
+        <h3>Add a language</h3>
+        <p>Example: adding French (<code>fr</code>).</p>
+        <ol>
+            <li>In <code>app_strings.dart</code>, add <code>'fr'</code> to <code>AppStrings.supported</code>, and add a <code>case</code> for <code>'fr'</code> in <code>_getLocal()</code>.</li>
+            <li>Add <code>"fr": "..."</code> to every entry in <code>localStrings</code> in the same file:
+<pre><code>StringKeys.profile: {
+  "en": "Profile",
+  ...
+  "uk": "Профіль",
+  "fr": "Profil",
+},</code></pre></li>
+            <li>In <code>lib/features/preferences/bloc/locale_cubit.dart</code>, add an entry for French to <code>languages</code> (the code and the name shown in the picker, <code>Français</code>).</li>
+            <li>In <code>lib/app/app.dart</code>, add <code>Locale('fr')</code> to <code>supportedLocales</code>.</li>
+        </ol>
+
+        <h3>Remove a language</h3>
+        <p>Do the same steps in reverse: remove the code from <code>AppStrings.supported</code>, <code>_getLocal()</code>, <code>LocaleCubit.languages</code> and <code>supportedLocales</code>. The extra lines in <code>localStrings</code> can stay; they are simply not used.</p>
+
+        <h3>Default language</h3>
+        <p>English is the default in three places: <code>languageCode = 'en'</code> in <code>app_strings.dart</code>, and the starting value and fallback in <code>locale_cubit.dart</code>. Change all three to start in another language.</p>
+
+        <div class="alert-warning">
+            <strong>Right-to-left layout.</strong> Arabic texts are translated, but in this version the screen layout stays left-to-right. To mirror the layout for Arabic, add the <code>flutter_localizations</code> package and set <code>localizationsDelegates</code> (with <code>GlobalWidgetsLocalizations.delegate</code>) on the <code>MaterialApp</code> in <code>lib/app/app.dart</code>. A few labels, such as the bottom tab names in <code>lib/app/router/shell/app_shell_page.dart</code>, are written in English directly in the code.
+        </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="admob">
+        <h2>10. AdMob and Rewarded Ads</h2>
+        <p>Free users watch rewarded ads to add VPN time or unlock <strong>Ads</strong> locations; you can also show banner and interstitial ads. The package contains only <strong>Google's official test IDs</strong> (publisher <code>ca-app-pub-3940256099942544</code>), so ads show "Test Ad" until you add your own. Debug builds always use test ads.</p>
+        <div class="alert">
+            <strong>Your AdMob account, your responsibility.</strong> AdMob is free to join. You must follow the AdMob and Google ad network policies (including asking for consent where required; the app uses Google's UMP consent form) and you are responsible for any costs related to your account or traffic.
+        </div>
+
+        <h3>Step 1: App IDs (built into the app)</h3>
+        <p>Create your app in AdMob and replace Google's sample app IDs:</p>
+        <table class="doc-table">
+            <thead><tr><th>Platform</th><th>File</th><th>Value to replace</th></tr></thead>
+            <tbody>
+                <tr><td>Android</td><td><code>android/app/build.gradle</code> (<code>admobAppId</code> in <code>defaultConfig</code> and in the <code>release</code> block)</td><td><code>ca-app-pub-3940256099942544~3347511713</code></td></tr>
+                <tr><td>Android</td><td><code>lib/core/config/admob_config.dart</code> (<code>liveAndroidAppId</code>)</td><td>the same value as in <code>build.gradle</code></td></tr>
+                <tr><td>iOS</td><td><code>ios/Flutter/Release.xcconfig</code> and <code>ios/Flutter/Debug.xcconfig</code> (<code>GAD_APPLICATION_IDENTIFIER</code>)</td><td><code>ca-app-pub-3940256099942544~1458002511</code></td></tr>
+            </tbody>
+        </table>
+
+        <h3>Step 2: Ad unit IDs (in the admin panel)</h3>
+        <p>Create a <strong>Rewarded</strong> ad unit (and optionally Banner and Interstitial units) for each platform. Then in the admin panel open <strong>Plans &amp; billing &gt; Rewarded ads</strong> and enter the unit IDs. Release builds use these values; no new app build is needed to change them. As a fallback you can also put your Android rewarded unit in <code>liveAndroidRewardedUnitId</code> in <code>lib/core/config/admob_config.dart</code>.</p>
+
+        <h3>Step 3: Server-side verification (required for rewards)</h3>
+        <p>The backend adds time only after Google confirms the ad was watched. In AdMob, open your Rewarded ad unit &gt; <strong>Server-side verification</strong> and set the callback URL to:</p>
+<pre><code>https://api.your-domain.com/api/v1/webhooks/admob-ssv</code></pre>
+        <p>The app passes the user's ID and a one-time code with each ad; the backend checks Google's signature and the code before adding time. Optionally restrict which ad units may grant rewards with <code>ADMOB_REWARDED_AD_UNIT_IDS</code> in the backend <code>.env</code> or the ad unit list on the Rewarded ads page.</p>
+
+        <h3>Reward rules</h3>
+        <p>On <strong>Plans &amp; billing &gt; Rewarded ads</strong> you set: rewards on or off, the reward ladder (minutes per ad, by default 30, 50, 60, 90 and 120), rewards per day per user and per device (5), the wait between ads, the most time a user can bank (4 hours), banner on or off, interstitial on or off and how often (every 3 connects). The same page shows a log of every reward and why any was refused.</p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="premium">
+        <h2>11. Premium Subscriptions (RevenueCat)</h2>
+        <p>Premium is sold as Google Play and App Store subscriptions through <a href="https://www.revenuecat.com" target="_blank">RevenueCat</a>. The app buys through the RevenueCat SDK; RevenueCat tells your backend about every purchase, renewal, cancellation and refund through a webhook, and the backend grants or removes Premium. The app never grants Premium by itself.</p>
+
+        <h3>Step 1: Create the products in the stores</h3>
+        <ul class="step-list">
+            <li><strong>Google Play Console</strong> &gt; your app &gt; <strong>Monetize &gt; Subscriptions</strong>: create a subscription with base plans, for example a monthly and a yearly one. (Upload a build with billing to a testing track first; Play Console requires it.)</li>
+            <li><strong>App Store Connect</strong> &gt; your app &gt; <strong>Subscriptions</strong>: create a subscription group with a monthly and a yearly product.</li>
+        </ul>
+
+        <h3>Step 2: Set up RevenueCat</h3>
+        <ul class="step-list">
+            <li>Create a RevenueCat project, add your Android and iOS apps and connect them to the stores (Google service-account credentials and the App Store in-app purchase key, as RevenueCat's setup guide describes).</li>
+            <li>Import your products and create a <strong>current offering</strong> with a monthly and a yearly package.</li>
+            <li>Copy the <strong>public SDK keys</strong> (they start with <code>goog_</code> and <code>appl_</code>).</li>
+        </ul>
+
+        <h3>Step 3: Connect RevenueCat to Sable</h3>
+        <ul class="step-list">
+            <li>In the admin panel open <strong>Settings &gt; Integrations</strong> and enter the RevenueCat <strong>Android key</strong> and <strong>iOS key</strong>. The app reads them from the backend at start.</li>
+            <li>Generate a webhook secret: <code>openssl rand -hex 32</code>. Enter it as <strong>RevenueCat webhook secret</strong> on the same page (or <code>REVENUECAT_WEBHOOK_AUTH</code> in the backend <code>.env</code>).</li>
+            <li>In RevenueCat open <strong>Integrations &gt; Webhooks</strong>, add <code>https://api.your-domain.com/api/v1/webhooks/revenuecat</code> and set the <strong>Authorization header</strong> to exactly the same secret.</li>
+        </ul>
+
+        <h3>Step 4: Match the products to your plans</h3>
+        <p>In the admin panel open <strong>Plans &amp; billing &gt; Store products</strong>. For each store product, enter the <strong>exact product ID</strong> from the store and choose the plan it grants. The first start created example products (<code>com.sablevpn.app.premium.monthly</code>, <code>com.sablevpn.app.premium.yearly</code>, and <code>sable_primium_subscription:monthly-premium-base-pack</code> / <code>...:yearly-premium-base-pack</code> for Google Play): change them to your own IDs. For Google Play use the <code>subscriptionId:basePlanId</code> form.</p>
+        <p>Then check the plans on <strong>Plans &amp; billing &gt; Plans</strong>: name, price and currency shown on the paywall, devices, limits and features. The example plans use BDT prices; change them to your own currency and prices.</p>
+
+        <h3>How it works</h3>
+        <ul class="step-list">
+            <li>The paywall lists the active plans from the backend and buys the matching store product. Users must be signed in to buy, and the purchase is linked to their Sable account.</li>
+            <li>After a purchase the app waits for the backend to confirm Premium (usually a few seconds). <strong>Restore purchases</strong> on the paywall handles reinstalls and new phones.</li>
+            <li>Failed webhook events are retried every 10 minutes and can be replayed on <strong>Plans &amp; billing &gt; Payment events</strong>.</li>
+            <li>Keep <strong>RevenueCat sandbox</strong> switched on in Settings: App Review tests your app with sandbox purchases.</li>
+            <li>You can also give Premium without a purchase: on a user's page in the admin panel use <strong>Grant premium</strong>, or create promo codes.</li>
+        </ul>
+        <div class="alert">
+            <strong>Not included:</strong> Stripe, PayPal and other web checkouts. bKash and Nagad appear as switched-off rows in the database but have no checkout; leave them off.
+        </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="build-and-release">
+        <h2>12. Build and Release</h2>
+
+        <h3>Version number</h3>
+        <p>Set <code>version:</code> in <code>pubspec.yaml</code> (for example <code>1.0.1+3</code>: version name 1.0.1, build number 3). Android and iOS both read it. Raise the build number for every upload. In Xcode, give the <strong>VpnTunnel</strong> target the same version and build as the app, or App Store Connect warns that the extension version does not match.</p>
+
+        <h3>Android: create an upload keystore</h3>
+        <p><strong>macOS / Linux:</strong></p>
+<pre><code>keytool -genkey -v -keystore ~/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload</code></pre>
+        <p><strong>Windows:</strong></p>
+<pre><code>keytool -genkey -v -keystore %userprofile%\upload-keystore.jks -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias upload</code></pre>
+        <div class="alert-danger">
+            <strong>Keep the keystore and passwords safe and private.</strong> If you lose them you cannot update your app on Google Play. Never commit them to a public repository.
+        </div>
+
+        <h3>Android: key.properties</h3>
+        <p>Create <code>android/key.properties</code>:</p>
+<pre><code>storePassword=&lt;password from previous step&gt;
+keyPassword=&lt;password from previous step&gt;
+keyAlias=upload
+storeFile=&lt;full path to upload-keystore.jks&gt;</code></pre>
+        <p><code>android/app/build.gradle</code> already reads this file. If it is missing, release builds are signed with the debug key so they still build &mdash; Google Play will not accept those.</p>
+
+        <h3>Android: build</h3>
+<pre><code>flutter build apk --release          # APK for direct install / testing
+flutter build appbundle --release    # App Bundle for Google Play</code></pre>
+        <p>The App Bundle is created at <code>build/app/outputs/bundle/release/app-release.aab</code>. Upload it in Play Console.</p>
+        <div class="alert-warning">
+            <strong>Google Play declarations for a VPN app.</strong> Play Console asks for extra information about apps that use the VPN service. The app also lists installed apps for split tunneling, which needs the <code>QUERY_ALL_PACKAGES</code> permission and its own declaration. Before you submit, review the permissions in <code>android/app/src/main/AndroidManifest.xml</code> and remove any your version does not need (for example the camera permission is used only by the QR scanner on the Devices page).
+        </div>
+
+        <h3>iOS: Apple Developer setup</h3>
+        <p>The VPN tunnel is an iOS app extension, so iOS needs a paid Apple Developer account and a little more setup than a normal app. In your Apple Developer account (<strong>Certificates, Identifiers &amp; Profiles</strong>):</p>
+        <ul class="step-list">
+            <li>Register an <strong>App Group</strong>, for example <code>group.com.yourcompany.vpn</code> (the same value you set in section 3).</li>
+            <li>Register two <strong>App IDs</strong>: the app (<code>com.yourcompany.vpn</code>) and the tunnel (<code>com.yourcompany.vpn.VpnTunnel</code>). Enable <strong>Network Extensions</strong> and <strong>App Groups</strong> on both, and Push Notifications on the app ID.</li>
+        </ul>
+        <p>Then in Xcode (<code>ios/Runner.xcworkspace</code>), for <strong>both</strong> the Runner and VpnTunnel targets:</p>
+        <ul class="step-list">
+            <li><strong>Signing &amp; Capabilities</strong>: choose your <strong>Team</strong> (automatic signing) and check the bundle ID.</li>
+            <li>Check the capabilities: <strong>Network Extensions</strong> with <strong>Packet Tunnel</strong> ticked, and <strong>App Groups</strong> with your group ticked. On Runner, add <strong>Push Notifications</strong> if you use push.</li>
+        </ul>
+
+        <h3>iOS: build</h3>
+<pre><code>cd ios &amp;&amp; pod install &amp;&amp; cd ..
+flutter build ipa --release</code></pre>
+        <ul class="step-list">
+            <li>The minimum iOS version is <strong>15.6</strong>, set in both the Xcode project and the Podfile. Nothing to change.</li>
+            <li>The VPN core framework in <code>ios/Frameworks/</code> is linked only into the VpnTunnel extension. Do not add it to the Runner target.</li>
+            <li>Upload <code>build/ios/ipa/*.ipa</code> with Xcode's Organizer or the Transporter app. See Flutter's <a href="https://docs.flutter.dev/deployment/ios" target="_blank">iOS deployment guide</a>.</li>
+        </ul>
+
+        <h3>Test on a real device</h3>
+        <ul class="step-list">
+            <li>Android: enable USB debugging, connect the phone and run <code>flutter run --release</code>. Accept the VPN permission dialog on first connect.</li>
+            <li>iOS: connect the iPhone, trust the computer, select it in Xcode and press Run. On first connect iOS asks to add a VPN configuration.</li>
+            <li>After connecting, open a "what is my IP" website in the phone's browser: it should show your VPN server's address.</li>
+        </ul>
+
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="backend-setup">
+        <h2>13. Backend Setup (NestJS)</h2>
+        <p>The backend lives in <code>sable-backend/</code>. It is a NestJS 11 + TypeORM API on PostgreSQL. The app, the admin panel and the agents on your VPN servers talk only to this API.</p>
+
+        <h3>Step 1: Install</h3>
+<pre><code>cd sable-backend
+npm ci
+cp .env.example .env</code></pre>
+
+        <h3>Step 2: Create the database</h3>
+        <p>Use PostgreSQL 14 or newer (tested on 17). In <code>psql</code> as a superuser:</p>
+<pre><code>CREATE ROLE sable_user LOGIN PASSWORD 'choose-a-strong-password';
+CREATE DATABASE sable OWNER sable_user;</code></pre>
+        <p>The first start creates four extensions: <code>citext</code>, <code>pg_trgm</code>, <code>pgcrypto</code> and <code>uuid-ossp</code>. On PostgreSQL 13 and newer the database owner may create them. If your host refuses ("permission denied to create extension"), run these once as a superuser:</p>
+<pre><code>\c sable
+CREATE EXTENSION IF NOT EXISTS citext;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";</code></pre>
+
+        <h3>Step 3: Configure .env</h3>
+        <p>Every variable is explained in <code>.env.example</code>. Only the <strong>REQUIRED</strong> block must be filled in; every optional feature stays off until you configure it. Generate each secret with <code>openssl rand -hex 48</code>.</p>
+        <table class="doc-table">
+            <thead><tr><th>Variable</th><th>What to set</th></tr></thead>
+            <tbody>
+                <tr><td><code>NODE_ENV</code></td><td><code>development</code> on your computer, <code>production</code> on the server</td></tr>
+                <tr><td><code>PORT</code></td><td>API port, default <code>3001</code></td></tr>
+                <tr><td><code>API_PREFIX</code></td><td>Keep <code>api</code>. Every route is served under <code>/api/v1</code>, and the admin panel expects it</td></tr>
+                <tr><td><code>PUBLIC_API_URL</code></td><td>Your public API address <strong>including</strong> <code>/api/v1</code>, e.g. <code>https://api.your-domain.com/api/v1</code>. It is printed into the install command for new VPN servers, so it must be reachable from them</td></tr>
+                <tr><td><code>DB_HOST</code>, <code>DB_PORT</code>, <code>DB_USER</code>, <code>DB_PASSWORD</code>, <code>DB_NAME</code></td><td>Your PostgreSQL connection. Set <code>DB_SSL=true</code> for managed databases that require TLS</td></tr>
+                <tr><td><code>DB_RUN_MIGRATIONS</code></td><td>Keep <code>true</code>: the bundled migrations create and update every table at start. Keep <code>DB_SYNCHRONIZE=false</code></td></tr>
+                <tr><td><code>JWT_ACCESS_SECRET</code></td><td>Signs app tokens. At least 32 characters</td></tr>
+                <tr><td><code>JWT_ACCESS_TTL_SEC</code>, <code>JWT_REFRESH_TTL_SEC</code></td><td>Token lifetimes: 900 s (15 minutes) and 2592000 s (30 days) by default</td></tr>
+                <tr><td><code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_SECURE</code>, <code>SMTP_USER</code>, <code>SMTP_PASSWORD</code>, <code>SMTP_FROM_NAME</code>, <code>SMTP_FROM_EMAIL</code></td><td>Your email account for sign-up and password-reset codes. Port 465 with <code>SMTP_SECURE=true</code>, or 587 with <code>false</code> (STARTTLS). <code>SMTP_USER</code> and <code>SMTP_FROM_EMAIL</code> must be email addresses</td></tr>
+                <tr><td><code>ADMIN_EMAIL</code></td><td>The email you sign in to the admin panel with</td></tr>
+                <tr><td><code>ADMIN_PASSWORD_HASH</code></td><td>The hash of your admin password (step 4). Never the plain password</td></tr>
+                <tr><td><code>ADMIN_JWT_SECRET</code></td><td>Signs admin tokens. At least 32 characters, and different from <code>JWT_ACCESS_SECRET</code></td></tr>
+            </tbody>
+        </table>
+        <p>Useful optional settings:</p>
+        <table class="doc-table">
+            <thead><tr><th>Variable</th><th>What it does</th></tr></thead>
+            <tbody>
+                <tr><td><code>TRUST_PROXY</code></td><td><code>loopback</code> when nginx runs on the same server, so rate limits, the login lockout and the audit log see real client IPs</td></tr>
+                <tr><td><code>SWAGGER_ENABLED</code></td><td>Swagger UI at <code>/api/docs</code>. <strong>Set it to <code>false</code> on a public production server</strong> (the example file sets <code>true</code>). If you remove the line, Swagger is on in development and off in production</td></tr>
+                <tr><td><code>CORS_ORIGINS</code></td><td>Browser origins allowed to call the API. The admin panel calls the API from its own server, so it does not need an entry here</td></tr>
+                <tr><td><code>ADMIN_IP_ALLOWLIST</code></td><td>Comma-separated IPs or CIDRs allowed to reach <code>/api/v1/admin/*</code>. Empty means no IP restriction</td></tr>
+                <tr><td><code>ADMIN_TOKEN_TTL_SEC</code>, <code>ADMIN_LOGIN_MAX_ATTEMPTS</code>, <code>ADMIN_LOGIN_WINDOW_SEC</code></td><td>Admin session length (3600 s) and the login lockout (5 failed attempts per 15 minutes per IP)</td></tr>
+                <tr><td><code>OTP_DEV_CODE</code></td><td><code>true</code> returns the sign-up code in the API response, so you can test without SMTP. Ignored when <code>NODE_ENV=production</code></td></tr>
+                <tr><td><code>OTP_TTL_EMAIL_SEC</code>, <code>OTP_RESEND_COOLDOWN_SEC</code>, <code>OTP_MAX_ATTEMPTS</code>, <code>OTP_MAX_RESENDS</code></td><td>Code lifetime (600 s), resend wait (60 s), wrong tries (5) and resends (3). Keep <code>OTP_LENGTH=6</code>; the app and the API expect six digits</td></tr>
+                <tr><td><code>THROTTLE_TTL_MS</code>, <code>THROTTLE_LIMIT</code></td><td>Global rate limit: 100 requests per 60 seconds per IP by default</td></tr>
+                <tr><td><code>FIREBASE_SERVICE_ACCOUNT_B64</code></td><td>Google sign-in and push notifications (step 7). Can also be set in the admin panel</td></tr>
+                <tr><td><code>CLOUDFLARE_R2_*</code></td><td>Image uploads from the admin panel (step 6)</td></tr>
+                <tr><td><code>REVENUECAT_WEBHOOK_AUTH</code>, <code>REVENUECAT_ACCEPT_SANDBOX</code></td><td>Premium subscriptions (<a href="#premium">section 11</a>). Can also be set in the admin panel</td></tr>
+                <tr><td><code>ADS_ENABLED</code>, <code>AD_REWARD_*</code>, <code>ADMOB_REWARDED_AD_UNIT_IDS</code></td><td>Rewarded ads (<a href="#admob">section 10</a>)</td></tr>
+                <tr><td><code>ENABLED_PROTOCOLS</code>, <code>PROTOCOL_PREFERENCE</code></td><td>Protocols offered to the app (<code>wireguard,v2ray</code>) and the order Auto tries them in</td></tr>
+                <tr><td><code>NODE_HEARTBEAT_TIMEOUT_SEC</code>, <code>PEER_SYNC_INTERVAL_SEC</code>, <code>SESSION_IDLE_TIMEOUT_SEC</code></td><td>When a silent VPN server is marked unreachable (120 s), how often agents pick up new peers (5 s), and when an idle session is closed (1800 s)</td></tr>
+            </tbody>
+        </table>
+
+        <div class="alert-warning">
+            <strong>Startup check.</strong> The server validates <code>.env</code> at start and lists every problem in one "Config validation error" message. Secrets shorter than 32 characters are rejected (the example placeholders are too short on purpose), and with <code>NODE_ENV=production</code> the admin email, an argon2 <code>ADMIN_PASSWORD_HASH</code> and <code>ADMIN_JWT_SECRET</code> are required. The check does not catch every placeholder: replace <code>DB_PASSWORD</code> and the <code>SMTP_*</code> values yourself.
+        </div>
+
+        <h3>Step 4: Your admin account</h3>
+        <p>Sable has a single admin account, defined in <code>.env</code> (there is no admin table). Create the password hash and paste the printed line into <code>.env</code>:</p>
+<pre><code>npm run admin:hash -- "your-admin-password"
+
+# prints:
+ADMIN_PASSWORD_HASH='$argon2id$v=19$m=65536,p=4,t=3$...'</code></pre>
+        <p>The password needs at least 10 characters. Keep the single quotes: the hash contains <code>$</code> signs. To change the password later, run the command again, replace the line and restart the backend.</p>
+
+        <h3>Step 5: First run</h3>
+<pre><code>npm run start:dev        # development, with auto-reload; API at http://localhost:3001/api/v1</code></pre>
+        <h4>What a successful first run looks like</h4>
+        <p>This is the real output of <code>npm run start:dev</code> on an empty PostgreSQL 17 database, with only the REQUIRED block of <code>.env</code> filled in (Firebase and R2 not configured yet). The run used <code>PORT=3101</code> because port 3001 was busy on the test machine; yours will show your own port. About 230 lines that list modules and routes are shortened in the middle.</p>
+        <div class="terminal">
+&gt; sable-backend@1.0.0 start:dev
+&gt; nest start --watch
+
+[4:18:08 PM] Starting compilation in watch mode...
+
+<span class="t-note">1</span> <span class="t-ok">[4:18:11 PM] Found 0 errors. Watching for file changes.</span>
+
+[16:18:11.670] INFO (64421): Starting Nest application... {"context":"NestFactory"}
+[16:18:11.670] INFO (64421): TypeOrmModule dependencies initialized {"context":"InstanceLoader"}
+[16:18:11.670] INFO (64421): MailerModule dependencies initialized {"context":"InstanceLoader"}
+[16:18:11.670] INFO (64421): UsersModule dependencies initialized {"context":"InstanceLoader"}
+[... 51 more &quot;InstanceLoader ... dependencies initialized&quot; lines ...]
+<span class="t-note">2</span> <span class="t-dim">[16:18:11.671] WARN (64421): Unsupported route path: "/api/*". In previous versions, the symbols ?, *, and + were used to denote optional or repeating path parameters. ... Attempting to auto-convert to "/api/{*path}"... {"context":"LegacyRouteConverter"}</span>
+[16:18:11.671] INFO (64421): HealthController {/api/health} (version: 1): {"context":"RoutesResolver"}
+[16:18:11.671] INFO (64421): Mapped {/api/health, GET} (version: 1) route {"context":"RouterExplorer"}
+[... 172 more &quot;RoutesResolver&quot; / &quot;Mapped {...} route&quot; lines ...]
+<span class="t-note">3</span> <span class="t-warn">[16:18:11.671] WARN (64421): CLOUDFLARE_R2_* not set — image uploads disabled {"context":"StorageService"}</span>
+<span class="t-note">4</span> <span class="t-warn">[16:18:11.671] WARN (64421): No Firebase service account — push and social login are off {"context":"FirebaseService"}</span>
+<span class="t-note">5</span> <span class="t-ok">[16:18:11.671] INFO (64421): Partitions ensured at boot: vpn_sessions_2026_10, vpn_sessions_2026_11, vpn_sessions_2026_12 {"context":"SessionsService"}</span>
+<span class="t-note">6</span> <span class="t-ok">[16:18:11.671] INFO (64421): Nest application successfully started {"context":"NestApplication"}</span></div>
+        <ol class="annot">
+            <li><strong>Found 0 errors</strong>: the TypeScript code compiled.</li>
+            <li><strong>WARN "Unsupported route path"</strong>: comes from the NestJS router while it converts a catch-all route. It is harmless and can be ignored.</li>
+            <li><strong>WARN CLOUDFLARE_R2_*</strong>: normal until you set up R2 (step 6). Only image uploads in the admin panel are off.</li>
+            <li><strong>WARN No Firebase service account</strong>: normal until you add it (step 7). Email sign-in still works; Google sign-in and push notifications are off.</li>
+            <li><strong>Partitions ensured</strong>: the monthly tables for VPN session history were prepared.</li>
+            <li><strong>Nest application successfully started</strong>: success. The API is ready. The migrations already created every table and the default data before this line.</li>
+        </ol>
+        <p>If the output stops with a red error before line 6, compare it with the <a href="#backend-troubleshooting">troubleshooting list</a> below. The most common causes are a wrong database password or port, a database that does not exist yet, and a port that is already in use (<code>EADDRINUSE</code>).</p>
+
+        <h4>Check it in the browser or terminal</h4>
+<pre><code>$ curl -s http://localhost:3001/api/v1/health
+{"status":"ok","info":{"database":{"status":"up"}},"error":{},"details":{"database":{"status":"up"}}}
+
+$ curl -s http://localhost:3001/api/v1/regions
+{"success":true,"data":[{"code":"id-jkt-01","name":"Jakarta","country_code":"ID","city":"Jakarta","flag_url":"https://upload.wikimedia.org/...","latitude":-6.208763,"longitude":106.845599,"access_level":0}]}</code></pre>
+        <p>A reply like this means the API, the database and the default data all work. Open <code>http://localhost:3001/api/docs</code> in your browser to see the interactive Swagger API docs:</p>
+        <figure class="doc-shot">
+            <img src="assets/first-run-swagger.jpg" alt="Swagger UI at /api/docs showing Sable VPN API 1.0" loading="lazy">
+            <figcaption>Swagger at <code>/api/docs</code> after a successful first run.</figcaption>
+        </figure>
+
+        <p>The first start creates every table and this default data:</p>
+        <table class="doc-table">
+            <thead><tr><th>Data</th><th>Default</th></tr></thead>
+            <tbody>
+                <tr><td>Plans</td><td><code>free</code> (1 device, 60 minutes a day, ads), <code>reward</code> (earned with an ad), <code>premium</code> (for manual grants), <code>premium_monthly</code> and <code>premium_yearly</code> (5 devices, no limits, no ads). Edit prices, limits and texts in the admin panel</td></tr>
+                <tr><td>Store products</td><td>Example App Store and Google Play product IDs linked to the monthly and yearly plans. Replace them with your own (<a href="#premium">section 11</a>)</td></tr>
+                <tr><td>Payment gateways</td><td>Google Play and App Store (through RevenueCat), active. bKash and Nagad rows exist but are switched off and not integrated</td></tr>
+                <tr><td>Sample location</td><td>Region <code>Jakarta</code> with server <code>jkt01.your-domain.com</code> (<code>203.0.113.10</code>, a documentation address). It is only an example: delete it, or edit it to match your real server (<a href="#vpn-servers">section 15</a>)</td></tr>
+                <tr><td>Rewarded ads</td><td>Reward ladder 30, 50, 60, 90, 120 minutes, 5 rewards a day, and Google's test rewarded ad unit</td></tr>
+                <tr><td>App pages</td><td>Empty privacy policy and terms, and an About page that credits the open-source VPN core</td></tr>
+            </tbody>
+        </table>
+        <p>No app users are created. Sign in to the admin panel with <code>ADMIN_EMAIL</code> and your password once it is running (<a href="#admin-panel-setup">section 14</a>).</p>
+
+        <h3>Step 6: Image storage (Cloudflare R2, optional)</h3>
+        <ul class="step-list">
+            <li>In Cloudflare, open <strong>R2</strong>, create a bucket and connect a <strong>custom domain</strong> (for example <code>cdn.your-domain.com</code>) or enable its public r2.dev URL.</li>
+            <li>Create an <strong>R2 API token</strong> with Object Read &amp; Write on that bucket.</li>
+            <li>Fill in <code>CLOUDFLARE_R2_ENDPOINT</code> (<code>https://&lt;account-id&gt;.r2.cloudflarestorage.com</code>), <code>CLOUDFLARE_R2_ACCESS_KEY_ID</code>, <code>CLOUDFLARE_R2_SECRET_ACCESS_KEY</code>, <code>CLOUDFLARE_R2_BUCKET</code>, <code>CLOUDFLARE_R2_PUBLIC_URL</code> (https) and optionally <code>CLOUDFLARE_R2_PREFIX</code> (a folder inside the bucket), then restart.</li>
+        </ul>
+        <p>R2 is used for images you upload in the admin panel: push notification images, region flags and pictures in app pages. PNG, JPEG, WebP and GIF up to 2 MB. Without R2 the upload button reports that uploads are not configured; you can still paste https image links instead.</p>
+
+        <h3>Step 7: Firebase service account (optional)</h3>
+        <p>The backend uses a Firebase service account to verify Google sign-in and to send push notifications. In the Firebase console open <strong>Project settings &gt; Service accounts &gt; Generate new private key</strong>, then either:</p>
+        <ul class="step-list">
+            <li>paste the whole JSON in the admin panel: <strong>Settings &gt; Integrations &gt; Firebase service account</strong> (takes effect within 30 seconds, no restart), or</li>
+            <li>encode it and put it in <code>.env</code>: <code>base64 -i service-account.json | tr -d '\n'</code> &rarr; <code>FIREBASE_SERVICE_ACCOUNT_B64=...</code>, then restart.</li>
+        </ul>
+        <p>The service account must belong to the same Firebase project as the app (<a href="#firebase-setup">section 4</a>).</p>
+
+        <h3>Step 8: Go live with PM2 and nginx</h3>
+<pre><code>npm ci
+npm run build
+npm install -g pm2
+pm2 start prod.config.js      # app name "sable-api", NODE_ENV=production
+pm2 save &amp;&amp; pm2 startup        # restart automatically after a reboot</code></pre>
+        <p>Or run <code>bash scripts/deploy-production.sh</code>, which checks for <code>.env</code>, builds, and starts or reloads <code>sable-api</code>. Keep <strong>one</strong> PM2 instance: the scheduled jobs (free-time limits, idle sessions, server health, push sending, subscription expiry and clean-up) run inside the process.</p>
+        <p>Put nginx in front with HTTPS (for example with Let's Encrypt / certbot):</p>
+<pre><code>server {
+    listen 80;
+    server_name api.your-domain.com;
+    client_max_body_size 10m;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+        <p>Then run <code>sudo certbot --nginx -d api.your-domain.com</code> and set <code>TRUST_PROXY=loopback</code> in <code>.env</code>. Release builds of the app only talk to HTTPS addresses.</p>
+
+        <h3 id="backend-troubleshooting">Troubleshooting</h3>
+        <table class="doc-table">
+            <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+            <tbody>
+                <tr><td>"Config validation error" at start</td><td>Read the list; it names every variable to fix (see the startup check above)</td></tr>
+                <tr><td><code>ECONNREFUSED</code> or "password authentication failed"</td><td>Check the <code>DB_*</code> values and that PostgreSQL is running and accepts connections</td></tr>
+                <tr><td>"database &hellip; does not exist"</td><td>Create it first (step 2), and check <code>DB_NAME</code></td></tr>
+                <tr><td>"permission denied to create extension"</td><td>Run the <code>CREATE EXTENSION</code> lines from step 2 as a superuser</td></tr>
+                <tr><td><code>EADDRINUSE</code> (port already in use)</td><td>Another program uses the port. Change <code>PORT</code> in <code>.env</code> and in your nginx <code>proxy_pass</code></td></tr>
+                <tr><td>Sign-up codes never arrive</td><td>Check the server log for "mail send failed". Fix the <code>SMTP_*</code> values; for testing set <code>OTP_DEV_CODE=true</code> in development</td></tr>
+                <tr><td>"No Firebase service account" warning</td><td>Normal until step 7. Google sign-in and push are off until then</td></tr>
+                <tr><td>Google sign-in returns 400 "Social sign-in is not available"</td><td>Firebase service account missing (step 7), or <code>GOOGLE_SIGNIN_ENABLED=false</code></td></tr>
+                <tr><td>Image uploads fail</td><td>R2 is not configured or wrong (step 6). Images are limited to 2 MB</td></tr>
+                <tr><td>RevenueCat webhook gets 503 or 401</td><td>503: the webhook secret is not set. 401: the Authorization value in RevenueCat does not match exactly (<a href="#premium">section 11</a>)</td></tr>
+                <tr><td>Admin login answers 429</td><td>Too many failed attempts from your IP. Wait until the lockout window ends (15 minutes by default; the message says how long)</td></tr>
+                <tr><td>Admin login answers 403 <code>IP_NOT_ALLOWED</code></td><td>Your IP is not in <code>ADMIN_IP_ALLOWLIST</code></td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="admin-panel-setup">
+        <h2>14. Admin Panel Setup (Next.js)</h2>
+        <p>The admin panel lives in <code>sable-admin/</code>. It is a Next.js 16 web app (React 19, Tailwind 4) that talks to the backend. It needs Node.js 20.9 or newer (tested on 24).</p>
+
+        <h3>Step 1: Install and configure</h3>
+<pre><code>cd sable-admin
+npm ci
+cp .env.example .env</code></pre>
+        <table class="doc-table">
+            <thead><tr><th>Variable</th><th>What to set</th></tr></thead>
+            <tbody>
+                <tr><td><code>API_BASE_URL</code></td><td>Your backend address <strong>without</strong> <code>/api/v1</code>, e.g. <code>http://localhost:3001</code> locally or <code>https://api.your-domain.com</code> in production. The panel adds <code>/api/v1/admin/</code> itself</td></tr>
+                <tr><td><code>NEXT_PUBLIC_APP_NAME</code></td><td>Name in the sidebar, sign-in page and browser tab (default <code>Sable Admin</code>). Run <code>npm run build</code> again after changing it</td></tr>
+                <tr><td><code>SESSION_COOKIE_NAME</code></td><td>Name of the sign-in cookie (default <code>sable_admin</code>). No need to change it</td></tr>
+            </tbody>
+        </table>
+        <div class="alert">
+            <strong>How the panel reaches the API.</strong> <code>API_BASE_URL</code> is read only by the panel's own server, never by the browser. The browser calls the panel, and the panel forwards each request to the backend with the admin token from an httpOnly cookie. So the backend does not need a CORS entry for the panel, and the token is never readable by page scripts.
+        </div>
+
+        <h3>Step 2: Run</h3>
+<pre><code>npm run dev        # http://localhost:5101</code></pre>
+        <p>Start the backend first. A successful start looks like this (real output):</p>
+        <div class="terminal">
+&gt; sable-admin@1.0.0 dev
+&gt; next dev -p 5101
+
+▲ Next.js 16.3.8 (Turbopack)
+- Local:         http://localhost:5101
+- Network:       http://&lt;your-computer-ip&gt;:5101
+<span class="t-note">3</span> <span class="t-ok">- Environments: .env</span>
+<span class="t-note">1</span> <span class="t-ok">✓ Ready in 212ms</span>
+✓ Running next.config.ts took 906ms
+
+<span class="t-note">4</span> <span class="t-dim">✓ Generated AGENTS.md and CLAUDE.md for AI agents. Set `agentRules: false` in next.config to disable.</span>
+<span class="t-note">2</span> <span class="t-ok"> GET /login 200 in 2.3s (next.js: 2.1s, proxy.ts: 81ms, application-code: 106ms)</span></div>
+        <ol class="annot">
+            <li><strong>Ready</strong>: the admin panel is running at <code>http://localhost:5101</code>.</li>
+            <li><strong>GET /login 200</strong>: your browser opened the sign-in page.</li>
+            <li><strong>Environments: .env</strong>: your settings file was found. If this line is missing, the panel uses the default backend address <code>http://localhost:3001</code>.</li>
+            <li><strong>Generated AGENTS.md and CLAUDE.md</strong>: Next.js 16 writes two helper files for AI coding tools into the project folder on <code>next dev</code>. They are not used by the panel; you can delete them or ignore them.</li>
+        </ol>
+        <p>Open <code>http://localhost:5101</code>. You should see the sign-in page:</p>
+        <figure class="doc-shot">
+            <img src="assets/first-run-admin-login.jpg" alt="Sable admin sign-in page" loading="lazy">
+            <figcaption>The admin sign-in page. Sign in with the backend's <code>ADMIN_EMAIL</code> and the password you hashed with <code>npm run admin:hash</code>.</figcaption>
+        </figure>
+
+        <p>After signing in you land on the Dashboard. On a new installation most numbers are 0 until users connect. If sign-in fails with "Cannot reach the server", check that the backend is running and that <code>API_BASE_URL</code> is right.</p>
+
+        <h3>Step 3: Go live</h3>
+<pre><code>npm ci
+npm run build
+pm2 start prod.config.js     # app name "sable-admin", runs "next start" on port 5101
+pm2 save</code></pre>
+        <p>Put nginx in front with HTTPS. HTTPS is required in production: the sign-in cookie is marked <code>Secure</code>, so the browser will not send it over plain HTTP.</p>
+<pre><code>server {
+    listen 80;
+    server_name admin.your-domain.com;
+    client_max_body_size 10m;
+
+    location / {
+        proxy_pass http://127.0.0.1:5101;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+        <p>Then run <code>sudo certbot --nginx -d admin.your-domain.com</code>. Vercel also works: import the <code>sable-admin</code> folder, set <code>API_BASE_URL</code> in the project settings and deploy. <code>npm run build</code> downloads the Geist fonts from Google Fonts, so the build machine needs internet access.</p>
+
+        <h3>Accounts and security</h3>
+        <ul class="step-list">
+            <li>There is <strong>one admin account</strong>, set in the backend <code>.env</code> (<code>ADMIN_EMAIL</code> and <code>ADMIN_PASSWORD_HASH</code>). There are no staff roles; the admin can use every page.</li>
+            <li>A session lasts one hour by default (<code>ADMIN_TOKEN_TTL_SEC</code> in the backend). When it expires the panel returns you to the sign-in page with "Your session expired".</li>
+            <li>Five wrong passwords from one IP lock sign-in for 15 minutes. Use <code>ADMIN_IP_ALLOWLIST</code> in the backend to allow the admin API only from your own IPs.</li>
+            <li>Every change made in the panel is recorded in the <strong>Audit log</strong> with the time, IP and the values before and after.</li>
+        </ul>
+
+        <h3>What you can manage</h3>
+        <table class="doc-table">
+            <thead><tr><th>Page</th><th>What it does</th></tr></thead>
+            <tbody>
+                <tr><td>Dashboard</td><td>Active users (24 h), sign-ups today, paid subscribers, estimated revenue, ad rewards today, bandwidth today, servers and stale servers, a trend chart and a server table. Refreshes every 30 seconds</td></tr>
+                <tr><td>Servers</td><td>Every VPN server with region, protocols, status, health, load, peers, traffic and last heartbeat. Search, filter and sort; <strong>Add server</strong> opens the setup wizard (<a href="#vpn-servers">section 15</a>)</td></tr>
+                <tr><td>Server detail</td><td>Tabs for Overview (CPU, memory, load, peers, bandwidth), Protocols, IP pools, Sessions and Settings. Actions: Activate, Maintenance, Drain, Disable, Re-enable, Rotate agent token, Disconnect all and Delete</td></tr>
+                <tr><td>Regions</td><td>Locations shown in the app: code, name, country, city, map position, flag, access level (Free, Ads or Premium), order and active switch</td></tr>
+                <tr><td>Plans &amp; billing &gt; Plans</td><td>Price, currency, billing period, trial days, access level, daily time, data allowance, speed limit, devices at once, ads, features, and whether the plan is sold on the paywall. <strong>Apply to current holders</strong> pushes a changed limit to existing users</td></tr>
+                <tr><td>Store products</td><td>Google Play and App Store product IDs and which plan each one grants</td></tr>
+                <tr><td>Subscriptions / Payment events</td><td>Every subscription with filters, and every RevenueCat event with its result. A failed event can be replayed</td></tr>
+                <tr><td>Promo codes</td><td>Code, plan, duration, start and end dates, total and per-user limits, and redemptions</td></tr>
+                <tr><td>Rewarded ads</td><td>The ad reward log and the ad settings: rewards on or off, reward ladder, daily limits, cooldown, ad unit IDs, banner and interstitial switches</td></tr>
+                <tr><td>Users</td><td>Search and filter users. User detail shows devices, sessions, subscription, payments and ad rewards. Actions: grant or revoke Premium, send a password reset code, sign out everywhere or one device, suspend, delete</td></tr>
+                <tr><td>Support</td><td>Contact messages and problem reports sent from the app, with notes and resolved / open status</td></tr>
+                <tr><td>App config</td><td>Maintenance mode and feature switches (ads, social sign-in, promo codes); <strong>Announcements</strong> (banners in the app); <strong>Push notifications</strong> to everyone, a plan, a platform or one user, now or scheduled; <strong>Versions</strong> (latest and minimum version per platform, force update); <strong>Pages</strong> (privacy policy, terms, about, with a rich-text editor)</td></tr>
+                <tr><td>Audit log</td><td>Who changed what and when, with the values before and after</td></tr>
+                <tr><td>Settings</td><td>Integration keys: Firebase service account, RevenueCat webhook secret, RevenueCat sandbox switch, RevenueCat Android and iOS SDK keys, and how long logs are kept. Secrets are write-only. The AdMob app ID and the Firebase files are built into the app and cannot be set here</td></tr>
+            </tbody>
+        </table>
+
+        <h3 id="admin-panel-tour">Admin panel tour</h3>
+        <p>Screenshots from the demo, so you know your way around before you add your own servers. Server addresses are examples.</p>
+        <figure class="doc-shot">
+            <img src="assets/admin-dashboard.jpg" alt="Dashboard: active users, sign-ups, revenue, ad rewards, bandwidth and server health" loading="lazy">
+            <figcaption>Dashboard: active users, sign-ups, revenue, ad rewards, bandwidth and server health</figcaption>
+        </figure>
+        <figure class="doc-shot">
+            <img src="assets/admin-servers.jpg" alt="Servers: every VPN server with status, health, load and peers" loading="lazy">
+            <figcaption>Servers: every VPN server with its status, health, load and peers</figcaption>
+        </figure>
+        <figure class="doc-shot">
+            <img src="assets/admin-detail.jpg" alt="Server detail: load, peers, CPU, memory, bandwidth and the server actions" loading="lazy">
+            <figcaption>Server detail: load, peers, CPU, memory, bandwidth and the server actions</figcaption>
+        </figure>
+        <figure class="doc-shot">
+            <img src="assets/admin-regions.jpg" alt="Regions: the locations users see in the app" loading="lazy">
+            <figcaption>Regions: the locations users see in the app</figcaption>
+        </figure>
+        <figure class="doc-shot">
+            <img src="assets/admin-addregion.jpg" alt="Add a region: flag, city, map position and access level" loading="lazy">
+            <figcaption>Add a region: flag, city, map position and access level</figcaption>
+        </figure>
+        <figure class="doc-shot">
+            <img src="assets/admin-plans.jpg" alt="Plans and billing: plans with prices, access and limits" loading="lazy">
+            <figcaption>Plans &amp; billing: plans with their prices, access level and limits</figcaption>
+        </figure>
+        <figure class="doc-shot">
+            <img src="assets/admin-push.jpg" alt="Push notifications: audience, message, image, link and schedule" loading="lazy">
+            <figcaption>Push notifications: audience, message, image, link and schedule</figcaption>
+        </figure>
+
+        <h3>Branding the admin panel</h3>
+        <table class="doc-table">
+            <thead><tr><th>What</th><th>Where</th></tr></thead>
+            <tbody>
+                <tr><td>Name</td><td><code>NEXT_PUBLIC_APP_NAME</code> in <code>.env</code>; the page description is in <code>src/app/layout.tsx</code></td></tr>
+                <tr><td>Colours (light and dark)</td><td><code>src/app/globals.css</code>: <code>:root</code> for light, <code>.dark</code> for dark. The primary colour is <code>#16408c</code> (light) and <code>#5b8def</code> (dark)</td></tr>
+                <tr><td>Logo icon</td><td>The shield icon in <code>src/components/layout/sidebar.tsx</code> and <code>src/features/auth/login-form.tsx</code></td></tr>
+                <tr><td>Favicon</td><td><code>src/app/favicon.ico</code></td></tr>
+            </tbody>
+        </table>
+        <p>The panel is in English. Dates and numbers follow the browser's language.</p>
+
+        <h3>Troubleshooting</h3>
+        <table class="doc-table">
+            <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+            <tbody>
+                <tr><td>"Cannot reach the server" or 502 on every page</td><td>The backend is not running, or <code>API_BASE_URL</code> is wrong. It must not end in <code>/api/v1</code></td></tr>
+                <tr><td>"Invalid email or password"</td><td>Use the backend's <code>ADMIN_EMAIL</code> and the password you hashed. If you forgot it, run <code>npm run admin:hash</code> again in <code>sable-backend</code>, replace the line in <code>.env</code> and restart the backend</td></tr>
+                <tr><td>Sign-in works locally but not on the server (you stay on the sign-in page)</td><td>Use HTTPS. In production the cookie is only sent over HTTPS</td></tr>
+                <tr><td>"Your session expired"</td><td>Normal after one hour. Sign in again, or raise <code>ADMIN_TOKEN_TTL_SEC</code> in the backend</td></tr>
+                <tr><td>"Images can be at most 2 MB" or uploads fail</td><td>Use a smaller image, and check R2 in the backend (<a href="#backend-setup">section 13, step 6</a>)</td></tr>
+                <tr><td>A changed <code>NEXT_PUBLIC_APP_NAME</code> has no effect</td><td>Run <code>npm run build</code> again and restart</td></tr>
+                <tr><td>Port 5101 is in use</td><td>Change <code>-p 5101</code> in the <code>dev</code> and <code>start</code> scripts in <code>package.json</code> and in <code>prod.config.js</code></td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="vpn-servers">
+        <h2>15. VPN Servers and the Node Agent</h2>
+        <p>Your users' traffic flows through VPN servers that you rent and control. Each one runs WireGuard, optionally Xray for V2Ray (VMess over TLS), and the small Sable <strong>node agent</strong>, which keeps the server in sync with the backend. You add servers from the admin panel; one copy-and-paste command sets each one up.</p>
+
+        <h3>What a VPN server needs</h3>
+        <table class="doc-table">
+            <thead><tr><th></th><th>Requirement</th></tr></thead>
+            <tbody>
+                <tr><td>Operating system</td><td>Ubuntu 22.04 or 24.04, or Debian 12, with systemd. The installer refuses other systems</td></tr>
+                <tr><td>CPU and memory</td><td>x86_64 or ARM64, at least 1 GB RAM</td></tr>
+                <tr><td>Network</td><td>A public IPv4 address and outbound HTTPS to your API. Choose a plan with enough monthly bandwidth: every byte your users send and receive passes through this server</td></tr>
+                <tr><td>Access</td><td>Root (or sudo) over SSH</td></tr>
+                <tr><td>Firewall</td><td>Open <strong>UDP 51820</strong> for WireGuard. For V2Ray also open <strong>TCP 443</strong> and <strong>TCP 80</strong> (80 is used to get the TLS certificate). Open them in your provider's cloud firewall too; the installer opens <code>ufw</code> itself when ufw is active</td></tr>
+                <tr><td>Domain (V2Ray only)</td><td>A hostname such as <code>sg1.your-domain.com</code> whose DNS A record points to the server's public IP, so a Let's Encrypt certificate can be issued</td></tr>
+            </tbody>
+        </table>
+        <div class="alert">
+            Use a separate, clean server for VPN traffic, not the one that runs the backend. Do not run nginx or another web server on it: the V2Ray setup needs ports 80 and 443 for itself.
+        </div>
+
+        <h3>Step 1: Add a region</h3>
+        <p>In the admin panel open <strong>Regions</strong> and add the location: code (for example <code>sg-sin-01</code>), name, country code, city, map position, a flag image, the access level (<strong>Free</strong>, <strong>Ads</strong> or <strong>Premium</strong>) and the sort order. The first start of the backend created an example region, <em>Jakarta</em>, with a placeholder server; edit or delete them.</p>
+
+        <h3>Step 2: Add the server (the wizard)</h3>
+        <p>Open <strong>Servers &gt; Add server</strong>. The wizard has five steps:</p>
+        <ol>
+            <li><strong>Details</strong> &mdash; region, display name, hostname, public IPv4, provider, access level, maximum connections and bandwidth. Turn WireGuard on (UDP port 51820) and, if you want, V2Ray (VMess) with its TCP port and TLS.</li>
+            <li><strong>IP pool</strong> &mdash; the private addresses given to WireGuard clients. The default <code>10.8.0.0/24</code> (gateway <code>10.8.0.1</code>, DNS <code>1.1.1.1, 1.0.0.1</code>) serves about 250 users at once; use <code>10.8.0.0/22</code> for more. This step is skipped when WireGuard is off.</li>
+            <li><strong>Install</strong> &mdash; the panel creates the server in maintenance mode and shows a <strong>one-time install command</strong>. The agent token inside it is shown only once; copy the command before you continue.</li>
+            <li><strong>Verify</strong> &mdash; run the command on the server (step 3). The panel checks every 3 seconds until the agent has reached the API, registered its WireGuard key and sent its first heartbeat.</li>
+            <li><strong>Go live</strong> &mdash; the panel lists anything still missing. Click <strong>Activate server</strong> to make it available in the app.</li>
+        </ol>
+        <figure class="doc-shot">
+            <img src="assets/admin-ippool.jpg" alt="Add server wizard: IP pool step" loading="lazy">
+            <figcaption>The IP pool step of the wizard</figcaption>
+        </figure>
+        <figure class="doc-shot">
+            <img src="assets/admin-install.jpg" alt="Add server wizard: the one-time install command" loading="lazy">
+            <figcaption>The install step: copy the one-time command (the token is example data)</figcaption>
+        </figure>
+
+        <h3>Step 3: Run the install command on the server</h3>
+        <p>SSH into the new server and paste the command from the panel. It looks like this:</p>
+<pre><code>curl -fsSL 'https://api.your-domain.com/api/v1/node-agent/install-agent.sh' \
+  | sudo bash -s -- --api 'https://api.your-domain.com/api/v1' \
+      --server-id '&lt;server id&gt;' --token '&lt;one-time token&gt;'</code></pre>
+        <p>The script, in order:</p>
+        <ul class="step-list">
+            <li>checks it runs as root on a supported system, and installs <code>curl</code>, <code>jq</code> and a few basic tools;</li>
+            <li>asks the API for this server's settings (a 401 here means a wrong server ID or token);</li>
+            <li>installs Node.js 22 from nodejs.org (checksum verified) if Node.js 20 or newer is missing;</li>
+            <li><strong>WireGuard:</strong> installs it, creates <code>/etc/wireguard/wg0.conf</code> with a new key and NAT, starts <code>wg-quick@wg0</code> and registers the public key with the API;</li>
+            <li><strong>V2Ray (if enabled):</strong> installs Xray-core (checksum verified) as the <code>xray</code> service, gets a Let's Encrypt certificate for the hostname, and blocks traffic to private addresses;</li>
+            <li><strong>Agent:</strong> installs it in <code>/opt/vpn-node-agent</code>, writes its settings to <code>/opt/vpn-node-agent/.env</code> (readable by root only) and starts the <code>vpn-node-agent</code> systemd service.</li>
+        </ul>
+        <p>It ends with "Agent is running". Back in the panel the Verify step turns green.</p>
+        <p>Options: <code>--skip-wireguard</code> (V2Ray only), <code>--iface NAME</code> (WireGuard interface name, default <code>wg0</code>), and <code>--insecure-http</code> (allows an <code>http://</code> API address; only for testing on a private network).</p>
+
+        <h3>What the agent does</h3>
+        <ul class="step-list">
+            <li>Every <strong>30 seconds</strong> it sends a heartbeat: CPU, memory, load, connected peers and bandwidth. These numbers appear on the Dashboard and the server page.</li>
+            <li>Every <strong>5 seconds</strong> it asks the API for peers to add or remove, and applies them to WireGuard and Xray. So a user can connect a few seconds after tapping Connect.</li>
+            <li>It signs every request with its own agent token. The backend stores only a hash of the token.</li>
+            <li>It opens no ports. If a server stops sending heartbeats for 120 seconds, the backend marks it unreachable and stops sending users to it.</li>
+        </ul>
+
+        <h3>Check a server</h3>
+<pre><code>systemctl status vpn-node-agent                      # should be active (running)
+journalctl -u vpn-node-agent -n 30 --no-pager        # no "401" or "failed" lines
+wg show                                              # WireGuard interface and peers
+systemctl status xray                                # if V2Ray is enabled
+certbot certificates                                 # if V2Ray is enabled</code></pre>
+
+        <h3>Day-to-day operations</h3>
+        <table class="doc-table">
+            <thead><tr><th>Action (server page)</th><th>Effect</th></tr></thead>
+            <tbody>
+                <tr><td>Maintenance</td><td>No new connections; current users stay connected</td></tr>
+                <tr><td>Drain</td><td>No new connections, so current users leave over time (before you remove a server)</td></tr>
+                <tr><td>Disable</td><td>Disconnects everyone and takes the server out of use</td></tr>
+                <tr><td>Re-enable</td><td>Moves a disabled server back to maintenance; click Activate when it is ready</td></tr>
+                <tr><td>Disconnect all</td><td>Ends every current session on the server</td></tr>
+                <tr><td>Rotate agent token</td><td>Issues a new install command and makes the old token useless. Run the new command on the server</td></tr>
+                <tr><td>Delete</td><td>Removes the server. Refused while users are connected; drain or disable it first</td></tr>
+            </tbody>
+        </table>
+        <p>To update the agent on a server later, run the update command (no arguments; it reads the existing settings):</p>
+<pre><code>curl -fsSL 'https://api.your-domain.com/api/v1/node-agent/install-agent.sh' | sudo bash</code></pre>
+
+        <h3>Troubleshooting</h3>
+        <table class="doc-table">
+            <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+            <tbody>
+                <tr><td>"Unsupported OS"</td><td>Use Ubuntu 22.04 / 24.04 or Debian 12</td></tr>
+                <tr><td>Install stops with 401</td><td>Wrong server ID or token, or the token was already rotated. Use <strong>Rotate agent token</strong> on the server page and run the new command</td></tr>
+                <tr><td>Install stops with 409</td><td>The server is not ready in the panel yet; finish the wizard's Details step</td></tr>
+                <tr><td>Install refuses an <code>http://</code> API address</td><td>Put HTTPS on the API (<a href="#backend-setup">section 13</a>), and check <code>PUBLIC_API_URL</code> in the backend <code>.env</code></td></tr>
+                <tr><td>Certificate fails (V2Ray)</td><td>The hostname's DNS must point to this server, and TCP port 80 must be open and free</td></tr>
+                <tr><td>Server shows "stale" or "never seen"</td><td><code>journalctl -u vpn-node-agent -n 50</code>. Check outbound HTTPS to the API and that <code>wg show</code> works</td></tr>
+                <tr><td>App connects but no traffic passes</td><td>UDP 51820 (WireGuard) or TCP 443 (V2Ray) is blocked in the provider's firewall</td></tr>
+                <tr><td>App says the location is full</td><td>The IP pool or <code>max_connections</code> is used up. Use a bigger pool (<code>/22</code>) or add another server to the region</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="api-reference">
+        <h2>16. API Reference</h2>
+        <p>All endpoints live under <code>https://api.your-domain.com/api/v1</code>. The full, always-current reference with every request body is the <strong>Swagger UI</strong> at <code>/api/docs</code> (when <code>SWAGGER_ENABLED</code> is on). This section covers the conventions and the most important calls. The JSON below was captured from a real server or built from the request classes in the code.</p>
+
+        <h3>Conventions</h3>
+        <ul class="step-list">
+            <li>Requests and responses are JSON. Uploads use <code>multipart/form-data</code> with a field named <code>file</code>.</li>
+            <li>Unknown fields in a request body are rejected with 400 ("property &hellip; should not exist").</li>
+            <li>IDs are UUIDs. Times are ISO 8601 in UTC.</li>
+            <li>Rate limit: 100 requests per 60 seconds per IP by default (<code>THROTTLE_TTL_MS</code>, <code>THROTTLE_LIMIT</code>), with tighter limits on sign-in, codes, connect and promo codes. Admin routes allow 60 per minute. Over the limit you get 429.</li>
+            <li><strong>Device headers.</strong> <code>auth/signup</code>, <code>auth/login</code> and <code>auth/social</code> require <code>X-Device-Id</code> (a stable ID per install, up to 128 characters) and <code>X-Platform</code> (<code>android</code>, <code>ios</code>, <code>windows</code>, <code>macos</code>, <code>linux</code> or <code>tv</code>). Optional: <code>X-Device-Model</code>, <code>X-OS-Version</code>, <code>X-App-Version</code>, <code>X-App-Build</code>, <code>X-Locale</code>. Other routes take the device from the token.</li>
+        </ul>
+
+        <h3>The response envelope</h3>
+<pre><code>// success
+{ "success": true, "data": { ... } }
+
+// error (real response)
+{ "success": false,
+  "error": { "code": "UNAUTHORIZED", "message": "Invalid credentials" },
+  "path": "/api/v1/auth/login", "timestamp": "2026-10-25T10:19:58.275Z" }
+
+// validation error: message is a list (real response)
+{ "success": false,
+  "error": { "code": "BAD_REQUEST", "message": ["user_name must be an email", "password must be a string"] },
+  "path": "/api/v1/auth/login", "timestamp": "2026-10-25T10:19:53.928Z" }</code></pre>
+        <p>The health check (<code>GET /health</code>) and the agent files (<code>GET /node-agent/:name</code>) are not wrapped. Some errors carry extra fields; for example <code>DEVICE_LIMIT_EXCEEDED</code> includes <code>limit</code>, <code>devices</code> and a <code>device_manage_token</code> the app uses to sign another device out.</p>
+        <p><strong>Pagination</strong> (admin lists): <code>?page=1&amp;limit=20</code> (maximum 100). The response <code>data</code> is <code>{ "items": [...], "page": 1, "limit": 20, "total": 57 }</code>.</p>
+
+        <table class="doc-table">
+            <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+            <tbody>
+                <tr><td>200 / 201</td><td>Success</td></tr>
+                <tr><td>400</td><td>Invalid input (<code>BAD_REQUEST</code>, <code>MISSING_DEVICE_HEADERS</code>, <code>UNSUPPORTED_PROVIDER</code>)</td></tr>
+                <tr><td>401</td><td>Missing, invalid or expired token, or wrong credentials</td></tr>
+                <tr><td>403</td><td>Not allowed: <code>REQUIRES_UPGRADE</code>, <code>REQUIRES_AD</code>, <code>ACCOUNT_DELETION_PENDING</code>, <code>IP_NOT_ALLOWED</code> (admin)</td></tr>
+                <tr><td>404</td><td>Not found</td></tr>
+                <tr><td>409</td><td>Conflict: <code>DEVICE_LIMIT_EXCEEDED</code>, <code>PASSWORD_NOT_SET</code>, <code>DUPLICATE</code></td></tr>
+                <tr><td>422</td><td>Request understood but refused, e.g. <code>WRONG_PASSWORD</code>, <code>PROMO_DISABLED</code>, <code>UPLOADS_NOT_CONFIGURED</code></td></tr>
+                <tr><td>429</td><td>Too many requests</td></tr>
+                <tr><td>500</td><td><code>INTERNAL_ERROR</code>; details are only in the server log</td></tr>
+                <tr><td>503</td><td><code>MAINTENANCE</code> (maintenance mode is on), or a service that is not configured (for example the RevenueCat webhook)</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Authentication</h3>
+        <p><strong>App users</strong> get a short-lived access token (15 minutes) and a refresh token (30 days). Send the access token on every user request:</p>
+<pre><code>Authorization: Bearer &lt;access_token&gt;</code></pre>
+        <p><strong>Sign-up with an email code:</strong></p>
+<pre><code>POST /api/v1/otp/send
+{ "destination": "user@example.com", "purpose": "register" }
+
+// real response
+{ "success": true, "data": { "sent": true, "resend_in": 60, "resend_available_at": "2026-10-25T10:21:03.488Z",
+  "expires_in": 600, "expires_at": "2026-10-25T10:30:03.488Z", "attempts_left": 5 } }
+
+POST /api/v1/otp/verify
+{ "destination": "user@example.com", "purpose": "register", "code": "123456" }
+// → data: { "otp_token": "...", "expires_in": 900, ... }
+
+POST /api/v1/auth/signup          (device headers required)
+{ "otp_token": "...", "password": "Str0ng!Passw0rd", "full_name": "Demo User" }
+// → 201, same body as login below</code></pre>
+        <p>Password reset uses the same two code calls with <code>"purpose": "reset_password"</code>, then <code>POST /auth/reset-password</code> with <code>{ "otp_token", "new_password" }</code>.</p>
+
+        <p><strong>Login:</strong></p>
+<pre><code>POST /api/v1/auth/login           (device headers required)
+{ "user_name": "user@example.com", "password": "Str0ng!Passw0rd" }
+
+{ "success": true, "data": {
+  "access_token": "eyJ...", "refresh_token": "...", "expires_in": 900,
+  "expires_at": "2026-10-25T10:15:00.000Z", "refresh_expires_at": "2026-11-24T10:00:00.000Z",
+  "user": { "id": "uuid", "user_name": "user@example.com", "full_name": null,
+            "register_provider": "email", "has_password": true },
+  "device": { "device_id": "uuid", "login_provider": "email" },
+  "entitlement": { "plan_code": "free", "plan_name": "Free", "access_level": 0, "max_devices": 1,
+                   "data_limit_bytes": null, "data_limit_period": "month", "speed_limit_mbps": null,
+                   "session_limit_seconds": 3600, "shows_ads": true, "source": "free", "expires_at": null } } }</code></pre>
+        <p>Other auth calls: <code>POST /auth/social</code> with a Firebase ID token (Google), <code>POST /auth/refresh</code> with <code>{ "refresh_token" }</code> (a reused refresh token signs that device out), <code>POST /auth/logout</code>, <code>GET</code>/<code>PATCH /auth/me</code>, <code>POST /auth/change-password</code> and <code>POST /auth/delete-account</code>.</p>
+        <p><strong>Admins</strong> sign in separately; admin and user tokens are signed with different secrets and cannot replace each other:</p>
+<pre><code>POST /api/v1/admin/auth/login
+{ "email": "admin@your-domain.com", "password": "your-admin-password" }
+
+// real response
+{ "success": true, "data": { "access_token": "eyJ...", "expires_at": "2026-10-25T11:18:39.285Z" } }</code></pre>
+
+        <h3>Example: connect</h3>
+<pre><code>POST /api/v1/connect              (user token)
+{ "region_code": "id-jkt-01", "protocol": "wireguard", "supported_protocols": ["wireguard", "v2ray"],
+  "credentials": { "wireguard": { "public_key": "&lt;the app's WireGuard public key&gt;" } },
+  "idempotency_key": "c0ffee-1" }
+
+{ "success": true, "data": {
+  "session_id": "uuid", "protocol": "wireguard", "peer_ready": false,
+  "config": { "address": "10.8.0.2/32", "dns": ["1.1.1.1", "1.0.0.1"], "mtu": 1420,
+              "peer": { "public_key": "&lt;server key&gt;", "endpoint": "jkt01.your-domain.com:51820",
+                        "allowed_ips": ["0.0.0.0/0", "::/0"], "persistent_keepalive": 25 } },
+  "session": { "started_at": "...", "expires_at": "...", "limit_seconds": 3600 },
+  "server_time": "..." } }</code></pre>
+        <p>Send <code>"protocol": null</code> to let the backend choose (Auto). For V2Ray, <code>config</code> is a VMess client configuration instead. <code>peer_ready</code> becomes true once the server's agent has applied the peer (within about 5 seconds). Errors include <code>REQUIRES_UPGRADE</code> and <code>REQUIRES_AD</code> (location needs Premium or an ad), <code>DAILY_LIMIT_REACHED</code>, <code>DATA_LIMIT_REACHED</code>, <code>NO_SERVER_AVAILABLE</code>, <code>AT_CAPACITY</code> and <code>MAINTENANCE</code>.</p>
+
+        <h3>Example: plans (public)</h3>
+<pre><code>GET /api/v1/plans
+
+// real response, shortened
+{ "success": true, "data": [
+  { "code": "premium_monthly", "name": "Premium Monthly", "access_level": 10, "max_devices": 5,
+    "shows_ads": false, "features": ["All server locations", "No ads", "5 devices", "Unlimited session time"],
+    "price": { "amount_minor": 50000, "currency": "BDT", "display": "৳500.00" },
+    "billing_period_days": 30, "is_recurring": true, "platforms": ["android", "ios"],
+    "payment_methods": [
+      { "gateway_code": "revenuecat_android", "name": "Google Play", "payment_type": "sdk",
+        "product_id": "sable_primium_subscription:monthly-premium-base-pack",
+        "charge": { "amount_minor": 200, "currency": "USD", "display": "$2.00" } },
+      { "gateway_code": "revenuecat_ios", "name": "App Store", "payment_type": "sdk",
+        "product_id": "com.sablevpn.app.premium.monthly",
+        "charge": { "amount_minor": 200, "currency": "USD", "display": "$2.00" } } ] } ] }</code></pre>
+        <p>The plan price and currency are what the paywall shows; the store charge comes from each store product. Change both in the admin panel to match your own store prices.</p>
+
+        <h3>Endpoint groups</h3>
+        <p>Every path below is relative to <code>/api/v1</code>. Access: <strong>public</strong> (no token), <strong>user</strong> (app token), <strong>admin</strong> (admin token, optional IP allowlist), <strong>node</strong> (a VPN server's agent token).</p>
+        <table class="doc-table">
+            <thead><tr><th>Group</th><th>Method and path</th><th>Access</th></tr></thead>
+            <tbody>
+                <tr><td>Health</td><td><code>GET /health</code></td><td>public</td></tr>
+                <tr><td>Email codes</td><td><code>POST /otp/send</code><br><code>POST /otp/verify</code></td><td>public</td></tr>
+                <tr><td>Auth</td><td><code>POST /auth/signup</code><br><code>POST /auth/login</code><br><code>POST /auth/social</code><br><code>POST /auth/refresh</code><br><code>POST /auth/reset-password</code></td><td>public</td></tr>
+                <tr><td>Account</td><td><code>POST /auth/logout</code><br><code>GET /auth/me</code><br><code>PATCH /auth/me</code><br><code>POST /auth/change-password</code><br><code>POST /auth/delete-account</code></td><td>user</td></tr>
+                <tr><td>Devices</td><td><code>GET /devices</code><br><code>POST /devices/push-token</code><br><code>DELETE /devices/:id</code></td><td>user</td></tr>
+                <tr><td>Catalogue</td><td><code>GET /plans</code><br><code>GET /protocols</code><br><code>GET /regions</code></td><td>public</td></tr>
+                <tr><td>Servers and connect</td><td><code>GET /servers</code><br><code>GET /servers/recommended</code><br><code>POST /connect</code><br><code>POST /disconnect</code><br><code>GET /sessions/current</code></td><td>user</td></tr>
+                <tr><td>Ads and promo</td><td><code>GET /ads/config</code><br><code>POST /ads/rewards/nonce</code><br><code>POST /promo/redeem</code></td><td>user</td></tr>
+                <tr><td>App content</td><td><code>GET /app/config</code><br><code>GET /app/announcements</code><br><code>GET /app/version-check</code><br><code>GET /app/pages/:key</code><br><code>GET /app/pages/:key/view</code></td><td>public</td></tr>
+                <tr><td>Support</td><td><code>POST /support/messages</code></td><td>public (token optional)</td></tr>
+                <tr><td>Webhooks</td><td><code>POST /webhooks/revenuecat</code><br><code>GET /webhooks/admob-ssv</code></td><td>RevenueCat secret / Google signature</td></tr>
+                <tr><td>Node agent</td><td><code>GET /internal/nodes/:serverId/setup</code><br><code>POST /internal/nodes/:serverId/register</code><br><code>POST /internal/nodes/:serverId/heartbeat</code><br><code>GET /internal/nodes/:serverId/peers</code><br><code>POST /internal/nodes/:serverId/peers/report</code></td><td>node</td></tr>
+                <tr><td>Agent files</td><td><code>GET /node-agent/:name</code> (install script, agent, unit file)</td><td>public</td></tr>
+                <tr><td>Admin: sign-in</td><td><code>POST /admin/auth/login</code><br><code>GET /admin/auth/me</code></td><td>public / admin</td></tr>
+                <tr><td>Admin: dashboard</td><td><code>GET /admin/stats/overview</code><br><code>GET /admin/stats/timeseries</code></td><td>admin</td></tr>
+                <tr><td>Admin: servers</td><td><code>GET</code>, <code>POST /admin/servers</code><br><code>GET</code>, <code>PATCH</code>, <code>DELETE /admin/servers/:id</code><br><code>POST /admin/servers/:id/activate</code>, <code>/maintenance</code>, <code>/drain</code>, <code>/disable</code>, <code>/enable</code>, <code>/rotate-token</code>, <code>/disconnect-all</code><br><code>GET /admin/servers/:id/status</code>, <code>/health</code>, <code>/sessions</code><br><code>POST /admin/servers/:id/sessions/:sessionId/disconnect</code><br><code>GET</code>, <code>POST /admin/servers/:id/pools</code>, <code>/protocols</code><br><code>PATCH</code>, <code>DELETE /admin/pools/:id</code>, <code>/admin/protocols/:id</code></td><td>admin</td></tr>
+                <tr><td>Admin: regions</td><td><code>GET</code>, <code>POST /admin/regions</code><br><code>GET</code>, <code>PATCH</code>, <code>DELETE /admin/regions/:id</code></td><td>admin</td></tr>
+                <tr><td>Admin: billing</td><td><code>GET</code>, <code>POST /admin/plans</code>; <code>GET</code>, <code>PATCH</code>, <code>DELETE /admin/plans/:id</code><br><code>POST /admin/plans/:id/activate</code>, <code>/deactivate</code>, <code>/apply-to-subscribers</code><br><code>GET /admin/gateways</code><br><code>GET</code>, <code>POST /admin/products</code>; <code>GET</code>, <code>PATCH</code>, <code>DELETE /admin/products/:id</code><br><code>GET /admin/subscriptions</code>, <code>/admin/subscriptions/:id</code><br><code>GET /admin/payment-events</code>, <code>/admin/payment-events/:id</code>; <code>POST /admin/payment-events/:id/replay</code><br><code>GET</code>, <code>POST /admin/promo-codes</code>; <code>GET</code>, <code>PATCH</code>, <code>DELETE /admin/promo-codes/:id</code>; <code>GET /admin/promo-codes/:id/redemptions</code><br><code>GET /admin/ads/events</code></td><td>admin</td></tr>
+                <tr><td>Admin: users</td><td><code>GET /admin/users</code>; <code>GET</code>, <code>DELETE /admin/users/:id</code><br><code>GET /admin/users/:id/devices</code>, <code>/sessions</code>, <code>/subscriptions</code>, <code>/payment-events</code>, <code>/ad-events</code><br><code>POST /admin/users/:id/suspend</code>, <code>/unsuspend</code>, <code>/cancel-deletion</code>, <code>/logout</code>, <code>/reset-password</code>, <code>/grant</code>, <code>/revoke-grant</code><br><code>DELETE /admin/users/:id/devices/:deviceId</code></td><td>admin</td></tr>
+                <tr><td>Admin: app content</td><td><code>GET</code>, <code>POST /admin/announcements</code>; <code>GET</code>, <code>PATCH</code>, <code>DELETE /admin/announcements/:id</code><br><code>GET /admin/app/pages</code>; <code>GET</code>, <code>PUT /admin/app/pages/:key</code><br><code>GET /admin/app/versions</code>; <code>PUT /admin/app/versions/:platform</code></td><td>admin</td></tr>
+                <tr><td>Admin: push</td><td><code>GET /admin/notifications</code>, <code>/admin/notifications/audience</code>, <code>/admin/notifications/:id</code><br><code>POST /admin/notifications/send</code> (10 per hour)<br><code>POST /admin/notifications/:id/cancel</code></td><td>admin</td></tr>
+                <tr><td>Admin: other</td><td><code>POST /admin/uploads?purpose=notification|region|page</code><br><code>GET /admin/audit</code><br><code>GET</code>, <code>PUT /admin/settings</code>; <code>PUT</code>, <code>DELETE /admin/settings/:key</code><br><code>GET /admin/support/messages</code>; <code>GET</code>, <code>PATCH /admin/support/messages/:id</code></td><td>admin</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="database-schema">
+        <h2>17. Database Schema</h2>
+        <p>PostgreSQL 14 or newer, managed with TypeORM. The tables are created by the migrations in <code>sable-backend/src/database/migrations/</code>, which run when the server starts (<code>DB_RUN_MIGRATIONS=true</code>). <code>sable-backend/database/schema.sql</code> holds the same schema and default data if you prefer to create the database by hand.</p>
+
+        <h3>Conventions</h3>
+        <ul class="step-list">
+            <li>IDs are UUIDs; times are <code>timestamptz</code>.</li>
+            <li>Email addresses use <code>citext</code>, so they are compared without regard to case.</li>
+            <li>Lists and settings are stored as <code>jsonb</code> (plan features, protocol settings, app settings, audit before/after).</li>
+            <li><code>vpn_sessions</code> is partitioned by month on <code>started_at</code>. The backend creates the next two months' partitions at start and every night at 02:00.</li>
+            <li>Extensions: <code>citext</code>, <code>pg_trgm</code>, <code>pgcrypto</code>, <code>uuid-ossp</code>.</li>
+        </ul>
+
+        <h3>Tables by area</h3>
+        <table class="doc-table">
+            <thead><tr><th>Area</th><th>Tables</th></tr></thead>
+            <tbody>
+                <tr><td>Accounts</td><td><code>users</code>, <code>devices</code>, <code>auth_refresh_tokens</code>, <code>verification_codes</code></td></tr>
+                <tr><td>Plans and billing</td><td><code>plans</code>, <code>user_entitlements</code>, <code>subscriptions</code>, <code>payment_gateways</code>, <code>gateway_products</code>, <code>plan_payment_methods</code>, <code>payment_events</code>, <code>promo_codes</code>, <code>promo_redemptions</code></td></tr>
+                <tr><td>Rewarded ads</td><td><code>ad_reward_nonces</code>, <code>ad_reward_events</code></td></tr>
+                <tr><td>Servers</td><td><code>regions</code>, <code>servers</code>, <code>server_protocols</code>, <code>server_health</code>, <code>ip_pools</code></td></tr>
+                <tr><td>VPN sessions</td><td><code>wireguard_peers</code> (WireGuard peers and V2Ray users), <code>vpn_sessions</code> (and its monthly partitions), <code>usage_daily</code></td></tr>
+                <tr><td>App content</td><td><code>app_settings</code>, <code>app_pages</code>, <code>app_versions</code>, <code>announcements</code>, <code>notifications</code>, <code>support_messages</code></td></tr>
+                <tr><td>System</td><td><code>audit_logs</code>, <code>migrations</code></td></tr>
+            </tbody>
+        </table>
+        <p>There is no admin table: the single admin account lives in the backend <code>.env</code>.</p>
+
+        <h3>Key tables</h3>
+        <table class="doc-table">
+            <thead><tr><th>Table</th><th>Important columns</th></tr></thead>
+            <tbody>
+                <tr><td><code>users</code></td><td><code>user_name</code> (citext), <code>register_provider</code>, <code>password_hash</code> (argon2, never returned), <code>email</code>, <code>full_name</code>, <code>status</code>, <code>country_code</code>, <code>last_seen_at</code>, <code>suspended_reason</code>, <code>deletion_requested_at</code>, <code>deleted_at</code></td></tr>
+                <tr><td><code>devices</code></td><td><code>user_id</code>, <code>install_id</code>, <code>platform</code>, <code>model</code>, <code>os_version</code>, <code>app_version</code>, <code>locale</code>, <code>push_token</code>, <code>is_blocked</code>, <code>last_seen_at</code>, <code>revoked_at</code></td></tr>
+                <tr><td><code>plans</code></td><td><code>code</code>, <code>name</code>, <code>access_level</code>, <code>max_devices</code>, <code>data_limit_bytes</code>, <code>data_limit_period</code>, <code>speed_limit_mbps</code>, <code>session_limit_seconds</code>, <code>shows_ads</code>, <code>features</code>, <code>price_minor</code>, <code>currency</code>, <code>discount_percent</code>, <code>billing_period_days</code>, <code>is_recurring</code>, <code>platforms</code>, <code>is_active</code>, <code>sort_order</code></td></tr>
+                <tr><td><code>user_entitlements</code></td><td>One row per user with the limits in force now: <code>plan_id</code>, <code>access_level</code>, <code>max_devices</code>, limits, <code>shows_ads</code>, <code>source</code>, <code>expires_at</code>, <code>subscription_id</code></td></tr>
+                <tr><td><code>subscriptions</code></td><td><code>user_id</code>, <code>plan_id</code>, <code>gateway_id</code>, <code>store</code>, <code>environment</code>, <code>original_transaction_id</code>, <code>status</code>, <code>auto_renew</code>, <code>current_period_start</code>, <code>current_period_end</code>, <code>grace_period_end</code>, <code>cancelled_at</code>, <code>expired_at</code>, <code>refunded_at</code></td></tr>
+                <tr><td><code>regions</code></td><td><code>code</code>, <code>name</code>, <code>country_code</code>, <code>city</code>, <code>latitude</code>, <code>longitude</code>, <code>flag_url</code>, <code>access_level</code>, <code>is_active</code>, <code>sort_order</code></td></tr>
+                <tr><td><code>servers</code></td><td><code>region_id</code>, <code>hostname</code>, <code>ipv4</code>, <code>ipv6</code>, <code>provider</code>, <code>access_level</code>, <code>status</code>, <code>weight</code>, <code>max_connections</code>, <code>bandwidth_mbps</code>, <code>agent_token_hash</code>, <code>agent_version</code>, <code>label</code></td></tr>
+                <tr><td><code>server_protocols</code></td><td><code>server_id</code>, <code>protocol</code>, <code>port</code>, <code>public_key</code>, <code>config</code>, <code>is_active</code></td></tr>
+                <tr><td><code>server_health</code></td><td><code>active_peers</code>, <code>load_percent</code>, CPU and memory, receive and send Mbps, <code>is_reachable</code>, <code>last_heartbeat_at</code></td></tr>
+                <tr><td><code>ip_pools</code></td><td><code>cidr</code>, <code>gateway_ip</code>, <code>dns_servers</code>, <code>first_ip</code>, <code>last_ip</code></td></tr>
+                <tr><td><code>wireguard_peers</code></td><td><code>user_id</code>, <code>device_id</code>, <code>server_id</code>, <code>protocol</code>, <code>public_key</code>, <code>allocated_ipv4</code>, <code>applied_at</code>, <code>revoked_at</code>, <code>removed_at</code>, <code>last_handshake_at</code>, bytes received and sent, <code>expires_at</code></td></tr>
+                <tr><td><code>vpn_sessions</code></td><td><code>user_id</code>, <code>device_id</code>, <code>server_id</code>, <code>protocol</code>, <code>assigned_ip</code>, <code>bytes_up</code>, <code>bytes_down</code>, <code>started_at</code>, <code>ended_at</code>, <code>duration_seconds</code>, <code>disconnect_reason</code></td></tr>
+                <tr><td><code>ad_reward_events</code></td><td><code>transaction_id</code>, <code>user_id</code>, <code>device_id</code>, <code>ad_unit</code>, <code>reward_seconds</code>, <code>status</code>, <code>granted_until</code></td></tr>
+                <tr><td><code>promo_codes</code></td><td><code>code</code>, <code>plan_id</code>, <code>duration_seconds</code>, <code>max_redemptions</code>, <code>per_user_limit</code>, <code>starts_at</code>, <code>expires_at</code>, <code>is_active</code>, <code>note</code></td></tr>
+                <tr><td><code>app_settings</code></td><td><code>key</code>, <code>value</code> (jsonb), <code>is_public</code>. Values set on the admin panel's Settings, Rewarded ads and App config pages</td></tr>
+                <tr><td><code>audit_logs</code></td><td><code>actor</code>, <code>ip</code>, <code>action</code>, <code>target_type</code>, <code>target_id</code>, <code>summary</code>, <code>before</code>, <code>after</code></td></tr>
+            </tbody>
+        </table>
+
+        <h3>Enum values</h3>
+        <table class="doc-table">
+            <thead><tr><th>Enum</th><th>Values</th></tr></thead>
+            <tbody>
+                <tr><td>Sign-in provider</td><td>email, phone, google, apple (email and google are used in this version)</td></tr>
+                <tr><td>Device platform</td><td>android, ios, windows, macos, linux, tv</td></tr>
+                <tr><td>User status</td><td>active, suspended, pending_deletion, deleted</td></tr>
+                <tr><td>Server status</td><td>active, maintenance, draining, disabled</td></tr>
+                <tr><td>VPN protocol</td><td>wireguard, v2ray (implemented); openvpn_udp, openvpn_tcp, ikev2, shadowsocks, trojan, hysteria (reserved)</td></tr>
+                <tr><td>Access level</td><td>0 Free, 5 Ads, 10 Premium</td></tr>
+                <tr><td>Entitlement source</td><td>free, reward, subscription, promo, referral, manual</td></tr>
+                <tr><td>Subscription status</td><td>active, billing_issue, paused, expired, refunded</td></tr>
+                <tr><td>Disconnect reason</td><td>user_disconnect, idle_timeout, session_limit, quota_exceeded, entitlement_expired, device_revoked, server_shutdown, server_disabled, admin_disconnect, unknown</td></tr>
+                <tr><td>Code purpose</td><td>register, reset_password, change_contact (not used)</td></tr>
+                <tr><td>Notification status</td><td>scheduled, sending, sent, failed, cancelled</td></tr>
+                <tr><td>Announcement style / platform</td><td>info, warning, promo / all, android, ios</td></tr>
+                <tr><td>Support message</td><td>kind: contact, report_issue; status: open, resolved</td></tr>
+                <tr><td>App page</td><td>privacy_policy, terms_of_service, about_us</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Migrations</h3>
+<pre><code>npm run migration:show       # list applied and pending migrations
+npm run migration:run        # apply pending migrations by hand
+npm run migration:revert     # undo the last migration</code></pre>
+
+        <h3>Backups</h3>
+<pre><code>pg_dump -Fc -d sable -f sable-$(date +%F).dump        # back up
+pg_restore -d sable --clean sable-2026-01-15.dump      # restore</code></pre>
+        <p>Schedule a daily backup (for example with cron) and keep copies off the server. The backend deletes old session and log data after the number of days set on the admin panel's Settings page (30 by default).</p>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="faq">
+        <h2>18. FAQ and Common Build Errors</h2>
+
+        <h3>Before anything else</h3>
+        <ul class="step-list">
+            <li>Run <code>flutter doctor</code> and fix every item it reports.</li>
+            <li>Run <code>flutter clean</code> then <code>flutter pub get</code>, and try again.</li>
+        </ul>
+
+        <h3>Flutter app</h3>
+        <table class="doc-table">
+            <thead><tr><th>Error or problem</th><th>Fix</th></tr></thead>
+            <tbody>
+                <tr><td>"Unsupported class file major version" / Gradle fails to start</td><td>Run Gradle with JDK 21: <code>flutter config --jdk-dir "&lt;Android Studio&gt;/jbr"</code> (Android Studio's bundled JDK)</td></tr>
+                <tr><td>"Your project's Gradle / Android Gradle Plugin / Kotlin version is lower than Flutter's minimum"</td><td>Use Flutter 3.47.6 as tested. On a newer Flutter, raise the versions in <code>android/settings.gradle</code> and <code>android/gradle/wrapper/gradle-wrapper.properties</code> to the values in the message</td></tr>
+                <tr><td>NDK not found</td><td>Install the NDK version named in the error from Android Studio's <strong>SDK Manager &gt; SDK Tools &gt; NDK (Side by side)</strong></td></tr>
+                <tr><td>Connect does nothing on an Android emulator</td><td>Expected: the VPN core is built for ARM phones only. Use a real Android phone</td></tr>
+                <tr><td>Connect does nothing in the iOS Simulator</td><td>Expected: iOS VPN extensions do not run in the Simulator. Use a real iPhone</td></tr>
+                <tr><td>iOS: Connect fails right away, or "permission denied" for the VPN configuration</td><td>The App Group or tunnel bundle ID differs between the targets and the code (section 3), or Network Extensions / App Groups are missing from one target (section 12)</td></tr>
+                <tr><td>"No matching client found for package name"</td><td><code>google-services.json</code> does not match <code>applicationId</code>. Run <code>flutterfire configure</code> again for your package name</td></tr>
+                <tr><td>Google sign-in fails on Android (error 10 / DEVELOPER_ERROR)</td><td>Add the SHA-1 and SHA-256 of the key you are running with (debug, upload or Play app signing) in Firebase</td></tr>
+                <tr><td>Google sign-in crashes on iOS</td><td>Replace <code>YOUR_IOS_CLIENT_ID</code> in <code>Info.plist</code> (section 5)</td></tr>
+                <tr><td>No Google button at all</td><td>Firebase is not configured yet (section 4); the app hides social sign-in without it</td></tr>
+                <tr><td>"Cannot reach the server" / every list is empty</td><td>Check <code>AUTH_API_BASE_URL</code> (section 8). Release builds need HTTPS. On a phone, <code>localhost</code> is the phone itself: use your computer's network IP in a debug build</td></tr>
+                <tr><td>Sign-up code never arrives</td><td>The backend cannot send email: check the <code>SMTP_*</code> values and the server log (section 13)</td></tr>
+                <tr><td>"Device limit reached" at sign-in</td><td>The plan allows only that many devices. Sign another device out from the dialog, or raise the plan's device limit in the admin panel</td></tr>
+                <tr><td>A location shows "Premium" or "Ad"</td><td>The location's access level is Premium or Ads. Change it on the admin panel's Regions page, or buy Premium / watch an ad</td></tr>
+                <tr><td>Connected, but no websites load</td><td>The VPN server's firewall blocks UDP 51820 (WireGuard) or TCP 443 (V2Ray), or the server is unhealthy. See section 15, Troubleshooting</td></tr>
+                <tr><td>CocoaPods errors (<code>pod install</code> fails)</td><td><code>cd ios &amp;&amp; pod repo update &amp;&amp; pod install</code>. If it still fails, delete <code>ios/Pods</code> and <code>ios/Podfile.lock</code> and run <code>pod install</code> again</td></tr>
+                <tr><td>iOS "No signing certificate" / "requires a development team"</td><td>Select your Team for both the Runner and VpnTunnel targets</td></tr>
+                <tr><td>Premium plans do not appear, or buying fails</td><td>RevenueCat keys missing (section 11), the store product IDs in the admin panel do not match the stores, the app is not installed from a Play testing track / TestFlight, or the user is not signed in</td></tr>
+                <tr><td>Purchased but still not Premium</td><td>The webhook is not reaching the backend. Check the RevenueCat webhook URL and Authorization header, and the admin panel's Payment events page</td></tr>
+                <tr><td>Watched an ad but no time was added</td><td>Server-side verification is not set on the AdMob ad unit (section 10), or the daily limit was reached. See the log on the Rewarded ads page</td></tr>
+                <tr><td>Ads show "Test Ad"</td><td>Expected in debug builds and with the default IDs. Set your own app IDs and ad units (section 10)</td></tr>
+                <tr><td>Push notifications do not arrive on iOS</td><td>Add the Push Notifications capability and upload an APNs key in Firebase (section 5). Test on a real device</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Backend, admin panel and VPN servers</h3>
+        <p>See the troubleshooting tables in <a href="#backend-setup">section 13</a>, <a href="#admin-panel-setup">section 14</a> and <a href="#vpn-servers">section 15</a>.</p>
+
+        <h3>General questions</h3>
+        <table class="doc-table">
+            <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+            <tbody>
+                <tr><td>Are VPN servers included?</td><td>No. You rent your own servers from any provider and add them in the admin panel; one command sets each one up (section 15).</td></tr>
+                <tr><td>How many users can one server handle?</td><td>It depends mostly on its network speed and bandwidth allowance. By default each server accepts 250 connections and each IP pool gives out about 250 addresses; raise both for bigger servers.</td></tr>
+                <tr><td>Which protocols are supported?</td><td>WireGuard and V2Ray (VMess over TLS), plus Auto. V2Ray is offered only on plans without a speed limit, because speed limits are applied to WireGuard.</td></tr>
+                <tr><td>Can I sell Premium on both Android and iOS?</td><td>Yes, through Google Play and the App Store via RevenueCat (section 11).</td></tr>
+                <tr><td>Can I add another payment gateway?</td><td>Yes, as custom development. Plans, gateways and products are separate tables, so a new gateway needs a checkout and a webhook that grants the plan.</td></tr>
+                <tr><td>Does the app work without Firebase?</td><td>Yes. Email sign-in, connecting, ads and Premium work; Google sign-in, push, Analytics and Crashlytics are off.</td></tr>
+                <tr><td>Can I host the backend and admin panel on one server?</td><td>Yes. Use two nginx server blocks (for example <code>api.</code> and <code>admin.</code> subdomains). Keep VPN servers separate.</td></tr>
+                <tr><td>What is <code>lib/main.demo.dart</code>?</td><td>A developer preview entry point (<code>flutter run -t lib/main.demo.dart</code>) that skips Firebase and fakes the signed-in session. It still needs a running backend for servers and plans. Use the normal <code>lib/main.dart</code> for real builds.</td></tr>
+                <tr><td>Are any files minified or obfuscated?</td><td>No. All three projects ship as readable source code. The only pre-built binaries are the VPN core libraries in <code>packages/flutter_vpncore/android/libs/</code> and <code>ios/Frameworks/</code>.</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="support">
+        <h2>19. Support</h2>
+        <p>Questions before or after purchase? Please use the <strong>Support</strong> tab on the CodeCanyon item page. All support is handled through the official Envato item support system.</p>
+        <p>Support covers bugs and questions about the included features. Customisation, and installation on your own servers, are not part of item support.</p>
+
+        <h3>Before you open a ticket</h3>
+        <ul class="step-list">
+            <li>Check the <a href="#faq">FAQ and common build errors</a> and the troubleshooting lists in sections 13, 14 and 15.</li>
+            <li>Make sure you are on the latest version (see the <a href="#changelog">changelog</a>).</li>
+        </ul>
+
+        <h3>What to include</h3>
+        <p>A complete first message lets us answer in one reply instead of several:</p>
+        <table class="doc-table">
+            <thead><tr><th>Information</th><th>How to get it</th></tr></thead>
+            <tbody>
+                <tr><td>Your purchase code</td><td>CodeCanyon &gt; Downloads &gt; Sable &gt; License certificate and purchase code</td></tr>
+                <tr><td>Which part</td><td>Flutter app, backend, admin panel or a VPN server, and the documentation section you were following</td></tr>
+                <tr><td>Platform and versions</td><td>Android or iOS and the device model; your computer's OS; for the app the output of <code>flutter doctor -v</code>; for the server the output of <code>node -v</code> and <code>psql --version</code> and the server's OS; for a VPN server the output of <code>lsb_release -a</code></td></tr>
+                <tr><td>The exact error message</td><td>Copy and paste the text, not a summary. A screenshot of the full screen or terminal helps too</td></tr>
+                <tr><td>Log output</td><td>App: the red error lines from <code>flutter run</code>, or the in-app debug logs. Backend: <code>pm2 logs sable-api --lines 100</code>. Admin panel: <code>pm2 logs sable-admin --lines 100</code> and the browser console (F12 &gt; Console). VPN server: <code>journalctl -u vpn-node-agent -n 100</code></td></tr>
+                <tr><td>Steps to reproduce</td><td>What you did, what you expected, and what happened instead</td></tr>
+            </tbody>
+        </table>
+        <div class="alert-warning">
+            <strong>Never send secrets.</strong> Remove passwords, <code>JWT_ACCESS_SECRET</code>, <code>ADMIN_JWT_SECRET</code>, agent tokens, service-account JSON, API keys and keystore passwords from anything you paste. We will never ask for them.
+        </div>
+
+        <h3>More resources</h3>
+        <ul class="step-list">
+            <li>Live demo: the admin panel and Android demo app linked on the item page.</li>
+            <li>Video tutorials: environment setup for <a href="#environment-setup">Windows, macOS and Linux</a> (section 2) and <a href="#firebase-setup">Firebase with Flutter</a> (section 4).</li>
+            <li>Flutter: <a href="https://docs.flutter.dev" target="_blank">docs.flutter.dev</a> &middot; NestJS: <a href="https://docs.nestjs.com" target="_blank">docs.nestjs.com</a> &middot; Next.js: <a href="https://nextjs.org/docs" target="_blank">nextjs.org/docs</a> &middot; WireGuard: <a href="https://www.wireguard.com" target="_blank">wireguard.com</a> &middot; RevenueCat: <a href="https://www.revenuecat.com/docs" target="_blank">revenuecat.com/docs</a></li>
+        </ul>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="changelog">
+        <h2>20. Changelog</h2>
+        <h3>Version 1.0.0 (Initial Release)</h3>
+        <ul>
+            <li>Initial release: Flutter VPN app (Android and iOS), NestJS backend with VPN node agent, and Next.js admin panel.</li>
+        </ul>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="upgrading">
+        <h2>21. Upgrading to a New Version</h2>
+        <p>When a new version of Sable is released, download it from your CodeCanyon <strong>Downloads</strong> page and read its <a href="#changelog">changelog</a> first. Your users, servers, plans, subscriptions and settings live in your PostgreSQL database, not in the code, so updating the code does <strong>not</strong> delete them.</p>
+
+        <h3>Before you start</h3>
+        <ul class="step-list">
+            <li><strong>Back up the database</strong> (see <a href="#database-schema">section 17, Backups</a>):
+<pre><code>pg_dump -Fc -d sable -f sable-before-upgrade.dump</code></pre></li>
+            <li>Keep your own changes in Git, or note which files you edited, so you can carry them over.</li>
+            <li>Never overwrite these files with the ones from the new package; they hold your settings:
+                <table class="doc-table">
+                    <thead><tr><th>Project</th><th>Keep your copy of</th></tr></thead>
+                    <tbody>
+                        <tr><td>Backend</td><td><code>.env</code>, and <code>prod.config.js</code> if you changed the PM2 name or memory limit</td></tr>
+                        <tr><td>Admin panel</td><td><code>.env</code>, and <code>prod.config.js</code> or the port in <code>package.json</code> if you changed them</td></tr>
+                        <tr><td>Flutter app</td><td><code>lib/firebase_options.dart</code>, <code>android/app/google-services.json</code>, <code>ios/Runner/GoogleService-Info.plist</code>, <code>android/key.properties</code> and your keystore, <code>secrets.json</code>, <code>lib/core/config/auth_api_config.dart</code>, <code>lib/core/config/admob_config.dart</code>, <code>ios/Flutter/*.xcconfig</code>, <code>ios/Runner/Info.plist</code>, your bundle IDs and App Group (section 3), your icons and <code>assets/brand/</code>, and <code>lib/design/tokens/sable_colors.dart</code></td></tr>
+                    </tbody>
+                </table>
+            </li>
+            <li>Compare the new <code>.env.example</code> files with your <code>.env</code> files and add any new variables.</li>
+        </ul>
+
+        <h3>Carrying your own code changes forward</h3>
+        <p>If you edited source files (not only settings), do not copy the new version straight over them. The safest way is Git:</p>
+<pre><code># one time, before your first customisation
+cd sable-backend            # or sable-admin, or sable-vpn
+git init &amp;&amp; git add -A &amp;&amp; git commit -m "Sable 1.0.0 original"
+# ...make your changes and commit them as usual...
+
+# when a new version arrives
+git checkout -b upgrade
+# copy the new package files over the folder (keep the files listed above)
+git add -A &amp;&amp; git commit -m "Sable 1.x.x original"
+git checkout main &amp;&amp; git merge upgrade      # Git combines both; fix any conflicts it lists</code></pre>
+        <p>Without Git, compare your old folder and the new one with a diff tool (VS Code: right-click two files &gt; <strong>Compare Selected</strong>) and re-apply your edits to the new files.</p>
+
+        <h3>1. Backend</h3>
+<pre><code>cd sable-backend
+# copy the new files over your old folder, keeping your .env
+npm ci
+npm run build
+pm2 reload sable-api</code></pre>
+        <ul class="step-list">
+            <li><strong>Database changes are applied automatically.</strong> With <code>DB_RUN_MIGRATIONS=true</code> the server runs every new migration when it starts. Each migration runs once and is recorded in the <code>migrations</code> table.</li>
+            <li>Migrations keep your existing rows. If a release ever needs to change existing data, its changelog says so.</li>
+            <li>Check what ran: <code>npm run migration:show</code>. If something goes wrong, <code>npm run migration:revert</code> undoes the last migration, or restore the backup with <code>pg_restore -d sable --clean sable-before-upgrade.dump</code> and go back to the old code.</li>
+            <li>Never edit an existing migration file; add a new one instead (<code>npm run migration:generate</code>).</li>
+        </ul>
+
+        <h3>2. VPN servers</h3>
+        <p>If the changelog mentions the node agent, run the update command on each VPN server (<a href="#vpn-servers">section 15</a>). It keeps the server's settings and token.</p>
+
+        <h3>3. Admin panel</h3>
+<pre><code>cd sable-admin
+# copy the new files over your old folder, keeping .env
+npm ci
+npm run build
+pm2 restart sable-admin</code></pre>
+        <p>The admin panel stores nothing itself; all data comes from the backend. Upgrade the backend first.</p>
+
+        <h3>4. Flutter app</h3>
+        <ul class="step-list">
+            <li>Copy the new <code>lib/</code>, <code>packages/</code>, <code>assets/</code> and <code>pubspec.yaml</code> over your project, then restore the files you customised (list above). If you use Git, commit first and review the diff.</li>
+            <li>Run:
+<pre><code>flutter clean
+flutter pub get
+cd ios &amp;&amp; pod install &amp;&amp; cd ..
+flutter run</code></pre></li>
+            <li>Raise <code>version:</code> in <code>pubspec.yaml</code> (for example <code>1.0.1+2</code>) and publish the update as in <a href="#build-and-release">section 12</a>.</li>
+            <li>Old app versions keep working with the new backend unless the changelog says otherwise. To make everyone update, raise the minimum version on the admin panel's <strong>App config &gt; Versions</strong> page.</li>
+        </ul>
+    </section>
+
+    <!-- ===================================================== -->
+    <section id="licences">
+        <h2>22. Open-Source Licences</h2>
+        <p>Sable is built on open-source software. The app, backend and admin panel install their libraries from <code>pubspec.yaml</code> and <code>package.json</code>; each library keeps its own licence (mostly MIT, BSD and Apache 2.0).</p>
+        <p>The VPN servers use WireGuard and Xray-core, which the install script downloads from their official sources onto your server; they are not part of the package.</p>
+        <p>The sable silhouette used in the logo is by Margot Michaud, published under CC0 (public domain) on PhyloPic.</p>
+    </section>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
