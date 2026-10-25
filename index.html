@@ -500,7 +500,7 @@ flutterfire configure --project=&lt;your-firebase-project-id&gt;</code></pre>
 
         <h3>Apple</h3>
         <div class="alert-warning">
-            <strong>Sign in with Apple is not supported by the backend in this version.</strong> The iOS app shows an Apple button when Firebase is configured, but the backend accepts only Google tokens and answers Apple sign-ins with <code>UNSUPPORTED_PROVIDER</code>. Hide the button before you publish: in <code>lib/data/auth/firebase_social_identity.dart</code> remove the line <code>if (Platform.isIOS || Platform.isMacOS) SocialProvider.apple,</code>. Email and Google sign-in are not affected.
+            <strong>Sign in with Apple is not included in this version.</strong> The backend accepts only Google tokens, so the Apple button is hidden in the app. The code is kept but commented out in <code>lib/data/auth/firebase_social_identity.dart</code> for a future update. Email and Google sign-in are not affected.
         </div>
         <p>Apple's App Review Guideline 4.8 asks apps that offer a third-party sign-in such as Google to also offer an equivalent private sign-in option. Email and password sign-in is available in Sable; check the current guideline before you submit and be ready to explain your sign-in options to App Review.</p>
 
@@ -732,7 +732,7 @@ storeFile=&lt;full path to upload-keystore.jks&gt;</code></pre>
 flutter build appbundle --release    # App Bundle for Google Play</code></pre>
         <p>The App Bundle is created at <code>build/app/outputs/bundle/release/app-release.aab</code>. Upload it in Play Console.</p>
         <div class="alert-warning">
-            <strong>Google Play declarations for a VPN app.</strong> Play Console asks for extra information about apps that use the VPN service. The app also lists installed apps for split tunneling, which needs the <code>QUERY_ALL_PACKAGES</code> permission and its own declaration. Before you submit, review the permissions in <code>android/app/src/main/AndroidManifest.xml</code> and remove any your version does not need (for example the camera permission is used only by the QR scanner on the Devices page).
+            <strong>Google Play declarations for a VPN app.</strong> Play Console asks for extra information about apps that use the VPN service. The app also lists installed apps for split tunneling, which needs the <code>QUERY_ALL_PACKAGES</code> permission and its own declaration. Before you submit, review the permissions in <code>android/app/src/main/AndroidManifest.xml</code> and remove any your version does not need. The camera permission is used only by the QR scanner on the Devices page; the app does not ask for the microphone or storage.
         </div>
 
         <h3>iOS: Apple Developer setup</h3>
@@ -810,7 +810,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";</code></pre>
             <thead><tr><th>Variable</th><th>What it does</th></tr></thead>
             <tbody>
                 <tr><td><code>TRUST_PROXY</code></td><td><code>loopback</code> when nginx runs on the same server, so rate limits, the login lockout and the audit log see real client IPs</td></tr>
-                <tr><td><code>SWAGGER_ENABLED</code></td><td>Swagger UI at <code>/api/docs</code>. <strong>Set it to <code>false</code> on a public production server</strong> (the example file sets <code>true</code>). If you remove the line, Swagger is on in development and off in production</td></tr>
+                <tr><td><code>SWAGGER_ENABLED</code></td><td>Swagger UI at <code>/api/docs</code>. <strong>Keep it <code>false</code> on a public production server</strong> (the example file sets <code>false</code>; set <code>true</code> while developing). If you remove the line, Swagger is on in development and off in production</td></tr>
                 <tr><td><code>CORS_ORIGINS</code></td><td>Browser origins allowed to call the API. The admin panel calls the API from its own server, so it does not need an entry here</td></tr>
                 <tr><td><code>ADMIN_IP_ALLOWLIST</code></td><td>Comma-separated IPs or CIDRs allowed to reach <code>/api/v1/admin/*</code>. Empty means no IP restriction</td></tr>
                 <tr><td><code>ADMIN_TOKEN_TTL_SEC</code>, <code>ADMIN_LOGIN_MAX_ATTEMPTS</code>, <code>ADMIN_LOGIN_WINDOW_SEC</code></td><td>Admin session length (3600 s) and the login lockout (5 failed attempts per 15 minutes per IP)</td></tr>
