@@ -172,7 +172,16 @@ kbd {
   font-weight: 600;
 }
 .doc-table td code {
-  white-space: nowrap;
+  white-space: normal;
+}
+code {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .doc-table {
+    display: block;
+    overflow-x: auto;
+  }
 }
 .doc-table tr:nth-child(even) td {
   background-color: #fcfcfc;
