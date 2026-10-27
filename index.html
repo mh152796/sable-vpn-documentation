@@ -1639,7 +1639,30 @@ flutter run</code></pre></li>
     <!-- ===================================================== -->
     <section id="licences">
         <h2>22. Open-Source Licences</h2>
-        <p>Sable is built on open-source software. The app, backend and admin panel install their libraries from <code>pubspec.yaml</code> and <code>package.json</code>; each library keeps its own licence (mostly MIT, BSD and Apache 2.0).</p>
+        <div class="alert-warning">
+            <strong>The app's VPN core is GPL-3.0. Read this before you publish the app.</strong> The VPN tunnel on Android and iOS runs on <strong>libbox</strong>, the mobile library of <a href="https://github.com/SagerNet/sing-box" target="_blank" rel="noopener">sing-box</a> (v1.13.16), licensed under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GNU General Public License v3.0 or later</a>. Sable is not affiliated with or endorsed by sing-box or SagerNet.
+        </div>
+        <table class="doc-table">
+            <thead><tr><th>Component</th><th>Where</th><th>Licence</th></tr></thead>
+            <tbody>
+                <tr><td>libbox (sing-box)</td><td><code>packages/flutter_vpncore/android/libs/libbox.aar</code>, <code>ios/Frameworks/Libbox.xcframework</code>. Rebuild with <code>tool/build_libbox.sh</code>; versions in <code>packages/flutter_vpncore/CORE_VERSION.md</code></td><td>GPL-3.0-or-later, plus a term forbidding use of the sing-box name for a derived product</td></tr>
+                <tr><td>Code adapted from sing-box-for-android</td><td>Android VPN service in <code>packages/flutter_vpncore/android/</code></td><td>GPL-3.0-or-later</td></tr>
+                <tr><td>Code adapted from sing-box-for-apple</td><td>iOS tunnel extension in <code>ios/VpnTunnel/</code></td><td>GPL-3.0-or-later</td></tr>
+                <tr><td>Code from shadowsocks-android</td><td><code>DefaultNetworkListener.kt</code></td><td>GPL-3.0-or-later</td></tr>
+            </tbody>
+        </table>
+        <p>Each adapted file carries a header naming its source. The full notices are in <code>sable-vpn/NOTICE</code> and the licence text in <code>sable-vpn/LICENSE-GPL-3.0</code>.</p>
+        <h3>What this means for you</h3>
+        <p>Because the app links this core, an app you build from this source and distribute (for example on Google Play or the App Store) is a GPL-3.0 work. When you publish it you must:</p>
+        <ol>
+            <li>Make the complete corresponding source code of the app you distribute available to its users under GPL-3.0-or-later, as a public repository link or a written offer valid for at least three years.</li>
+            <li>Include the GPL-3.0 licence text and the notices. The app's <strong>About us</strong> page is seeded with this notice and a source-code request address: in the admin panel open <strong>App config → Pages → About us</strong> and replace <code>support@example.com</code> with your own address. You may reword the page, but keep the notice and the way to get the source.</li>
+            <li>Not add terms that restrict your users' GPL-3.0 rights.</li>
+            <li>Not name your app after sing-box or suggest any association with it.</li>
+        </ol>
+        <p>The backend and the admin panel do not include sing-box and are not affected. This section is a summary, not legal advice; if you are unsure, ask a lawyer before you publish.</p>
+        <h3>Other libraries</h3>
+        <p>The app, backend and admin panel install their other libraries from <code>pubspec.yaml</code> and <code>package.json</code>; each keeps its own licence (mostly MIT, BSD and Apache 2.0).</p>
         <p>The VPN servers use WireGuard and Xray-core, which the install script downloads from their official sources onto your server; they are not part of the package.</p>
         <p>The sable silhouette used in the logo is by Margot Michaud, published under CC0 (public domain) on PhyloPic.</p>
     </section>
