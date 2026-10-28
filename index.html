@@ -1050,11 +1050,11 @@ pm2 save</code></pre>
                 <tr><td>Subscriptions / Payment events</td><td>Every subscription with filters, and every RevenueCat event with its result. A failed event can be replayed</td></tr>
                 <tr><td>Promo codes</td><td>Code, plan, duration, start and end dates, total and per-user limits, and redemptions</td></tr>
                 <tr><td>Rewarded ads</td><td>The ad reward log and the ad settings: rewards on or off, reward ladder, daily limits, cooldown, ad unit IDs, banner and interstitial switches</td></tr>
-                <tr><td>Users</td><td>Search and filter users. User detail shows devices, sessions, subscription, payments and ad rewards. Actions: grant or revoke Premium, send a password reset code, sign out everywhere or one device, suspend, delete</td></tr>
+                <tr><td>Users</td><td>Search and filter users. User detail shows devices, sessions, subscription, payments and ad rewards. Actions: grant or revoke Premium, send a password reset code, sign out everywhere or one device, suspend, delete. Users who asked to delete their account show as <em>Deletion requested</em> with the date it will be deleted (see <a href="#account-deletion">Account deletion</a>)</td></tr>
                 <tr><td>Support</td><td>Contact messages and problem reports sent from the app, with notes and resolved / open status</td></tr>
                 <tr><td>App config</td><td>Maintenance mode and feature switches (ads, social sign-in, promo codes); <strong>Announcements</strong> (banners in the app); <strong>Push notifications</strong> to everyone, a plan, a platform or one user, now or scheduled; <strong>Versions</strong> (latest and minimum version per platform, force update); <strong>Pages</strong> (privacy policy, terms, about, with a rich-text editor)</td></tr>
                 <tr><td>Audit log</td><td>Who changed what and when, with the values before and after</td></tr>
-                <tr><td>Settings</td><td>Integration keys: Firebase service account, RevenueCat webhook secret, RevenueCat sandbox switch, RevenueCat Android and iOS SDK keys, and how long logs are kept. Secrets are write-only. The AdMob app ID and the Firebase files are built into the app and cannot be set here</td></tr>
+                <tr><td>Settings</td><td>Integration keys: Firebase service account, RevenueCat webhook secret, RevenueCat sandbox switch, RevenueCat Android and iOS SDK keys, how long logs are kept, and the account deletion grace period. Secrets are write-only. The AdMob app ID and the Firebase files are built into the app and cannot be set here</td></tr>
             </tbody>
         </table>
 
@@ -1088,6 +1088,27 @@ pm2 save</code></pre>
             <img src="assets/admin-push.jpg" alt="Push notifications: audience, message, image, link and schedule" loading="lazy">
             <figcaption>Push notifications: audience, message, image, link and schedule</figcaption>
         </figure>
+
+        <h3 id="account-deletion">Account deletion</h3>
+        <p>Apple and Google require that users can delete their account from inside the app. Sable does this in two steps, the common pattern for apps with paid plans: the account is blocked at once, then deleted automatically after a grace period, so a request made by mistake can still be cancelled.</p>
+        <ol>
+            <li><strong>The user asks.</strong> In the app: <strong>Account &rarr; Delete account</strong>. An email account confirms with its password; a Google account does not need one. The screen says when the account will be deleted and that an app store subscription is not cancelled with it.</li>
+            <li><strong>Blocked at once.</strong> Every device is signed out, VPN tunnels close and push notifications stop. Signing in again shows &ldquo;This account is scheduled for deletion&rdquo;. In the admin panel the user shows as <strong>Deletion requested</strong>, with the reason and the deletion date.</li>
+            <li><strong>Deleted automatically.</strong> Every hour the backend deletes the accounts whose grace period has passed. Set the period in <strong>Settings &rarr; Data retention &rarr; Account deletion grace period (days)</strong>: 0 to 30, default 30. With 0 the account is deleted the moment the user asks.</li>
+            <li><strong>Admin options during the grace period.</strong> On the user's page: <strong>Cancel request</strong> (the account is active again, nothing was lost) or <strong>Delete permanently</strong> (deleted now).</li>
+        </ol>
+        <table class="doc-table">
+            <thead><tr><th>Deleted</th><th>Kept, without personal details</th></tr></thead>
+            <tbody>
+                <tr><td>Name, email, phone number and password; the user name becomes <code>deleted-&lt;id&gt;@deleted.invalid</code></td><td>Subscriptions and payment events (needed for accounting and refunds)</td></tr>
+                <tr><td>Sign-in tokens and verification codes</td><td>Rewarded-ad events and daily usage totals</td></tr>
+                <tr><td>Support messages</td><td>Audit log entries (they never contain the email)</td></tr>
+                <tr><td>Device model, OS version, language and push token; open VPN sessions end</td><td></td></tr>
+            </tbody>
+        </table>
+        <div class="alert-warning">
+            <strong>Store subscriptions are not cancelled.</strong> Deleting an account cannot stop Google Play or App Store billing; the user must cancel the subscription in the store. Mention this, and your grace period, in your privacy policy.
+        </div>
 
         <h3>Branding the admin panel</h3>
         <table class="doc-table">
@@ -1653,14 +1674,14 @@ flutter run</code></pre></li>
         </table>
         <p>Each adapted file carries a header naming its source. The full notices are in <code>sable-vpn/NOTICE</code> and the licence text in <code>sable-vpn/LICENSE-GPL-3.0</code>.</p>
         <h3>What this means for you</h3>
-        <p>Because the app links this core, an app you build from this source and distribute (for example on Google Play or the App Store) is a GPL-3.0 work. When you publish it you must:</p>
+        <p>Because the app links this core, <strong>the Flutter app (<code>sable-vpn/</code>) is licensed under GPL-3.0-or-later</strong> (see <code>sable-vpn/LICENSE.md</code>). You may use, change and publish it, commercially too. When you distribute it (for example on Google Play or the App Store) you must:</p>
         <ol>
             <li>Make the complete corresponding source code of the app you distribute available to its users under GPL-3.0-or-later, as a public repository link or a written offer valid for at least three years.</li>
             <li>Include the GPL-3.0 licence text and the notices. The app's <strong>About us</strong> page is seeded with this notice and a source-code request address: in the admin panel open <strong>App config → Pages → About us</strong> and replace <code>support@example.com</code> with your own address. You may reword the page, but keep the notice and the way to get the source.</li>
             <li>Not add terms that restrict your users' GPL-3.0 rights.</li>
             <li>Not name your app after sing-box or suggest any association with it.</li>
         </ol>
-        <p>The backend and the admin panel do not include sing-box and are not affected. This section is a summary, not legal advice; if you are unsure, ask a lawyer before you publish.</p>
+        <p>The backend and the admin panel do not include sing-box; they are licensed under the Envato Market licence you purchased, which adds no restriction to the app's GPL-3.0 rights. This section is a summary, not legal advice; if you are unsure, ask a lawyer before you publish.</p>
         <h3>Other libraries</h3>
         <p>The app, backend and admin panel install their other libraries from <code>pubspec.yaml</code> and <code>package.json</code>; each keeps its own licence (mostly MIT, BSD and Apache 2.0).</p>
         <p>The VPN servers use WireGuard and Xray-core, which the install script downloads from their official sources onto your server; they are not part of the package.</p>

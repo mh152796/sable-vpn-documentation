@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sable Live Demo</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin: 24px 0; }
+        .demo-card { border: 1px solid #dfe5f1; border-radius: 10px; padding: 22px; background: #fff; }
+        .demo-card h2 { margin-top: 0; border: 0; }
+        .demo-card img { width: 100%; border-radius: 8px; margin-bottom: 14px; }
+        .demo-button { display: inline-block; background: var(--primary); color: #fff; padding: 10px 18px; border-radius: 8px; font-weight: bold; }
+        .demo-button:hover { background: var(--primary-hover); }
+        .login { margin: 14px 0 0; }
+        .login code { word-break: break-all; }
+    </style>
+</head>
+<body>
+
+    <h1>Sable Live Demo</h1>
+    <p>Try the Sable VPN app and the admin panel. Demo accounts are shared and the demo data is reset periodically, so any changes you make are temporary.</p>
+
+    <div class="demo-grid">
+        <div class="demo-card">
+            <img src="assets/03-home-screen.jpg" alt="Sable app home screen">
+            <h2>Android app</h2>
+            <p>Install the APK on a real Android phone (the VPN tunnel does not run in an emulator). Sign in with the demo account, or create your own with any email address.</p>
+            <a class="demo-button" href="https://cdn.akkhorik.com/sable/app-release.apk">Download the demo APK</a>
+            <p class="login"><strong>Email:</strong> <code>mosarofdiu123@gmail.com</code><br><strong>Password:</strong> <code>11223344@aA</code></p>
+        </div>
+        <div class="demo-card">
+            <img src="assets/admin-dashboard.jpg" alt="Sable admin panel dashboard">
+            <h2>Admin panel</h2>
+            <p>Servers, regions, users, plans, rewarded ads, push notifications and settings.</p>
+            <a class="demo-button" href="https://sable-admin.pondeet.com/login" target="_blank" rel="noopener">Open the admin panel</a>
+            <p class="login"><strong>Email:</strong> <code>admin@demo.com</code><br><strong>Password:</strong> <code>sable@#2026</code></p>
+        </div>
+    </div>
+
+    <p>Setup guide, API reference and FAQ: <a href="index.html">Sable Documentation</a>.</p>
+
+</body>
+</html>
