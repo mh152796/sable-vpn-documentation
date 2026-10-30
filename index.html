@@ -50,6 +50,7 @@
             <li><a href="#changelog">20. Changelog</a></li>
             <li><a href="#upgrading">21. Upgrading to a New Version</a></li>
             <li><a href="#licences">22. Open-Source Licences</a></li>
+            <li><a href="#ai-disclosure">23. AI Disclosure</a></li>
         </ol>
     </div>
 
@@ -732,7 +733,7 @@ storeFile=&lt;full path to upload-keystore.jks&gt;</code></pre>
 flutter build appbundle --release    # App Bundle for Google Play</code></pre>
         <p>The App Bundle is created at <code>build/app/outputs/bundle/release/app-release.aab</code>. Upload it in Play Console.</p>
         <div class="alert-warning">
-            <strong>Google Play declarations for a VPN app.</strong> Play Console asks for extra information about apps that use the VPN service. The app also lists installed apps for split tunneling, which needs the <code>QUERY_ALL_PACKAGES</code> permission and its own declaration. Before you submit, review the permissions in <code>android/app/src/main/AndroidManifest.xml</code> and remove any your version does not need. The camera permission is used only by the QR scanner on the Devices page; the app does not ask for the microphone or storage.
+            <strong>Google Play declarations for a VPN app.</strong> Play Console asks for extra information about apps that use the VPN service. The app also lists installed apps for split tunneling, which needs the <code>QUERY_ALL_PACKAGES</code> permission and its own declaration. Before you submit, review the permissions in <code>android/app/src/main/AndroidManifest.xml</code> and remove any your version does not need. The app does not ask for the camera, the microphone or storage.
         </div>
 
         <h3>iOS: Apple Developer setup</h3>
@@ -1102,7 +1103,7 @@ pm2 save</code></pre>
             <tbody>
                 <tr><td>Name, email, phone number and password; the user name becomes <code>deleted-&lt;id&gt;@deleted.invalid</code></td><td>Subscriptions and payment events (needed for accounting and refunds)</td></tr>
                 <tr><td>Sign-in tokens and verification codes</td><td>Rewarded-ad events and daily usage totals</td></tr>
-                <tr><td>Support messages</td><td>Audit log entries (they never contain the email)</td></tr>
+                <tr><td>Support messages, including those sent signed out from the account's email</td><td>Audit log entries: the email is replaced with &ldquo;deleted user&rdquo;, and the IP address and deletion reason of the user's own request are cleared</td></tr>
                 <tr><td>Device model, OS version, language and push token; open VPN sessions end</td><td></td></tr>
             </tbody>
         </table>
@@ -1686,6 +1687,18 @@ flutter run</code></pre></li>
         <p>The app, backend and admin panel install their other libraries from <code>pubspec.yaml</code> and <code>package.json</code>; each keeps its own licence (mostly MIT, BSD and Apache 2.0).</p>
         <p>The VPN servers use WireGuard and Xray-core, which the install script downloads from their official sources onto your server; they are not part of the package.</p>
         <p>The sable silhouette used in the logo is by Margot Michaud, published under CC0 (public domain) on PhyloPic.</p>
+    </section>
+
+    <section id="ai-disclosure">
+        <h2>23. AI Disclosure</h2>
+        <p>AI tools were used to help create parts of this item:</p>
+        <ul>
+            <li><strong>Code:</strong> AI-assisted writing and review of source code in the app, the backend and the admin panel.</li>
+            <li><strong>Documentation and description:</strong> this documentation, the README files and the item description were written and edited with AI assistance.</li>
+            <li><strong>Graphics:</strong> the preview images and screenshots were edited with AI tools.</li>
+        </ul>
+        <p>All of it was reviewed, tested and finished by the author.</p>
+        <p>The item has <strong>no AI features</strong>: the app, the backend and the admin panel do not use or call any AI service or model.</p>
     </section>
 
     <script src="js/main.js"></script>
